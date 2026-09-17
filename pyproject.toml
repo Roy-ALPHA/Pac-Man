@@ -1,0 +1,11 @@
+[project]
+name = "Pac-Man"
+version = "0.1.0"
+description = "..."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "lark>=1.3.1",
+    "pygame>=2.6.1",
+    "rich>=15.0.0",
+]
