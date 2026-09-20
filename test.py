@@ -53,3 +53,4 @@ warnings.warn(
     category=PacmanConfigWarning,
     stacklevel=2
 )
+
