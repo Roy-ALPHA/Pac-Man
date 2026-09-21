@@ -5,31 +5,34 @@ from typing import Any
 from .errors import PacmanConfigWarning
 from lark import Lark
 from warnings import warn
+import random
 
 
 @dataclass(frozen=True)
-class LevelGonfig:
+class LevelConfig:
     level: int
     width: int
     height: int
+    pacgum: int
     level_max_time: int
     frightened_duration: float
     ghost_speed: float
+    seed: int
 
 
 @dataclass(frozen=True)
 class Config:
-    width: int = 15                                                                                                                                                                                 
-    height: int = 15                                                                                                                                                                                
-    lives: int = 3                                                                                                                                                                                  
-    pacgum: int = 42                                                                                                                                                                                
-    points_per_pacgum: int = 10                                                                                                                                                                     
-    points_per_super_pacgum: int = 50                                                                                                                                                               
+    width: int = 15
+    height: int = 15
+    lives: int = 3
+    pacgum: int = 42
+    points_per_pacgum: int = 10
+    points_per_super_pacgum: int = 50
     points_per_ghost: int = 200
     frightened_duration: float = 8.0
     ghost_speed: float = 3.0
-    player_speed: float = 3.0                                                                                                                                                              
-    seed: int = 42                                                                                                                                                              
+    player_speed: float = 3.0
+    seed: int = 42
     level_max_time: int = 90                                                                                                                                                                        
     highscore_filename: str = Path("highscores.json")
 
@@ -91,7 +94,7 @@ class Config:
                 category=PacmanConfigWarning,
                 stacklevel=2,
             )
-            return cls()    
+            return cls()
 
     @staticmethod
     def _strip_comments(raw: str) -> str:
@@ -190,3 +193,16 @@ class Config:
                 clamped["highscore_filename"] = Path(raw_path)
 
         return clamped
+
+    def generate_level(self, level: int) -> LevelConfig:
+        step = (level - 1) // 2
+        return LevelConfig(
+            level=level,
+            width=min(27, self.width + (step * 2)),
+            height=min(25, self.height + (step * 2)),
+            pacgum=self.pacgum + (level - 1) * 8,
+            level_max_time=max(45, self.level_max_time - (level - 1) * 3),
+            frightened_duration=max(2.0, self.frightened_duration - (level - 1) * 0.5),
+            ghost_speed=min(4.8, self.ghost_speed + (level - 1) * 0.1),
+            seed=self.seed if level == 0 else random.randint(1, 1_000_000)
+        )
