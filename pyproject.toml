@@ -6,6 +6,11 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "lark>=1.3.1",
+    "mazegenerator",
     "pygame>=2.6.1",
     "rich>=15.0.0",
+    "mazegenerator",
 ]
+
+[tool.uv.sources]
+mazegenerator = { path = "mazegenerator-00001-py3-none-any.whl" }

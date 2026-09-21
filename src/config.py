@@ -7,21 +7,34 @@ from lark import Lark
 from warnings import warn
 
 
-@dataclass(frozen=True)                                                                                                                                                                             
-class Config:                                                                                                                                                                                       
+@dataclass(frozen=True)
+class LevelGonfig:
+    level: int
+    width: int
+    height: int
+    level_max_time: int
+    frightened_duration: float
+    ghost_speed: float
+
+
+@dataclass(frozen=True)
+class Config:
     width: int = 15                                                                                                                                                                                 
     height: int = 15                                                                                                                                                                                
     lives: int = 3                                                                                                                                                                                  
     pacgum: int = 42                                                                                                                                                                                
     points_per_pacgum: int = 10                                                                                                                                                                     
     points_per_super_pacgum: int = 50                                                                                                                                                               
-    points_per_ghost: int = 200                                                                                                                                                                     
-    seed: int = 42                                                                                                                                                                                  
+    points_per_ghost: int = 200
+    frightened_duration: float = 8.0
+    ghost_speed: float = 3.0
+    player_speed: float = 3.0                                                                                                                                                              
+    seed: int = 42                                                                                                                                                              
     level_max_time: int = 90                                                                                                                                                                        
     highscore_filename: str = Path("highscores.json")
 
     @classmethod
-    def from_file(cls, path: Path) -> Config:
+    def from_file(cls, path: Path) -> "Config":
         # --- File System Checks ---
         if not path.exists():
             warn(
@@ -104,7 +117,6 @@ class Config:
 
         return "".join(child.value for child in tree.children)
 
-
     @staticmethod
     def _clamp_defaults(data: dict) -> dict:
         clamped: dict[str, Any] = {
@@ -115,11 +127,13 @@ class Config:
             "points_per_pacgum": 10,
             "points_per_super_pacgum": 50,
             "points_per_ghost": 200,
+            "frightened_duration": 8.0,
+            "ghost_speed": 3.0,
+            "player_speed": 3.0,
             "seed": 42,
             "level_max_time": 90,
-            "highscore_filename": Path("highscores.json"),
+            "highscore_filename": Path("highscores.json")
         }
-
 
         def validate_int_field(key: str, min_val: int | None = None, strictly_positive: bool = False):
             if key not in data:
