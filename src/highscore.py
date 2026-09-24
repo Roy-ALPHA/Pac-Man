@@ -119,9 +119,9 @@ class HighscoreManager:
 						f"Replacement: updated to new personal best {score}."
 				)
 				warn(
-						warn_msg,
-						category=HighscoreManagerWarning,
-						stacklevel=2,
+					warn_msg,
+					category=HighscoreManagerWarning,
+					stacklevel=2,
 				)
 				self._scores[name] = score
 			else:
