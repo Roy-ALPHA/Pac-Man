@@ -8,8 +8,6 @@ from contextlib import redirect_stdout
 import warnings
 from .errors import MazeAdapterWarning
 
-# methods to call: 'generate', 'maze', 'maze_entry', 'maze_exit', 'shortest_path'
-
 
 class CellType(Enum):
     WALL = auto()
@@ -124,23 +122,3 @@ class MazeAdapter:
                 category=MazeAdapterWarning,
                 stacklevel=3
             )
-
-    @staticmethod
-    def _scale_border_point(coord: tuple[int, int], raw_w: int, raw_h: int) -> tuple[int, int]:
-
-        x, y = coord
-
-        ext_x = 2 * x + 1
-        ext_y = 2 * y + 1
-
-        if x == 0:
-            ext_x = 0
-        elif x == raw_w - 1:
-            ext_x = 2 * raw_w
-
-        if y == 0:
-            ext_y = 0
-        elif y == raw_h - 1:
-            ext_y = 2 * raw_h
-
-        return (ext_x, ext_y)
