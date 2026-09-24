@@ -1,10 +1,17 @@
 import warnings
 
+
+class MazeAdapterWarning(UserWarning):
+    pass
+
+
 class PacmanConfigWarning(UserWarning):
     pass
 
+
 class HighscoreManagerWarning(UserWarning):
     pass
+
 
 def _pacman_warning_formatter(msg, category, filename, lineno, line=None):
     YELLOW = "\033[93m"
@@ -15,7 +22,7 @@ def _pacman_warning_formatter(msg, category, filename, lineno, line=None):
 
     pacman = f"{YELLOW}{BOLD}C{RESET} {CYAN}• • •{RESET}"
 
-    box_top    = f"{YELLOW}┌" + "─" * (len(str(msg)) + 12) + f"┐{RESET}"
+    box_top = f"{YELLOW}┌" + "─" * (len(str(msg)) + 12) + f"┐{RESET}"
     box_bottom = f"{YELLOW}└" + "─" * (len(str(msg)) + 12) + f"┘{RESET}"
 
     return (
@@ -24,6 +31,7 @@ def _pacman_warning_formatter(msg, category, filename, lineno, line=None):
         f"  {YELLOW}Alert › {RESET}    {msg}\n"
         f"{box_bottom}\n\n"
     )
+
 
 def setup_warnings():
     warnings.formatwarning = _pacman_warning_formatter

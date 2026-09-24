@@ -1,6 +1,6 @@
-from dataclasses import dataclass                                                                                                                                                                   
-import json                                                                                                                                                                                                                                                                                                                                                                                
-from pathlib import Path                                                                                                                                                                            
+from dataclasses import dataclass
+import json
+from pathlib import Path
 from typing import Any
 from .errors import PacmanConfigWarning
 from lark import Lark
@@ -33,7 +33,7 @@ class Config:
     ghost_speed: float = 3.0
     player_speed: float = 3.0
     seed: int = 42
-    level_max_time: int = 90                                                                                                                                                                        
+    level_max_time: int = 90
     highscore_filename: str = Path("highscores.json")
 
     @classmethod
