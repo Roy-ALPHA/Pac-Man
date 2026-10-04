@@ -1,12 +1,12 @@
 from mazegenerator import MazeGenerator
-from .config import LevelConfig
+from config import LevelConfig
 from dataclasses import dataclass
 from enum import Enum, auto
-from .consumables import Consumable
+from consumables import Consumable
 import io
 from contextlib import redirect_stdout
 import warnings
-from .errors import MazeAdapterWarning
+from errors import MazeAdapterWarning
 
 
 class CellType(Enum):
@@ -82,8 +82,8 @@ class MazeAdapter:
         raw_w = len(bitmask_maze[0])
         raw_h = len(bitmask_maze)
 
-        extended_w = 2 * raw_w + 1 # 2h + 1
-        extended_h = 2 * raw_h + 1 # 2w + 1
+        extended_w = 2 * raw_w + 1  # 2h + 1
+        extended_h = 2 * raw_h + 1  # 2w + 1
 
         extended_maze = [
             [Cell(x=x, y=y, cell_type=CellType.WALL) for x in range(extended_w)]

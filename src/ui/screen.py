@@ -1,9 +1,15 @@
 from abc import ABC, abstractmethod
-from inputhandler import InputCommand
-from renderer import Renderer
+from .inputhandler import InputCommand
+from .renderer import Renderer
 
 
 class Screen(ABC):
+
+    door_w = 0
+    door_fully_close = False
+    screen_w = 0
+    screen_h = 0
+    renderer: None | Renderer = None
 
     @abstractmethod
     def handle_input(self, command: InputCommand) -> None:
@@ -14,5 +20,5 @@ class Screen(ABC):
         pass
 
     @abstractmethod
-    def render(self, renderer: Renderer) -> None:
+    def render(self) -> None:
         pass

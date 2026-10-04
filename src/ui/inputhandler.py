@@ -16,6 +16,8 @@ class Direction(Enum):
 class InputCommand:
 
     direction: Direction = Direction.NONE
+    mouse_clicked: bool = False
+    play: bool = False
     pause: bool = False
     quit: bool = False
 
@@ -43,4 +45,11 @@ class InputHandler:
 
                 elif event.key in (pygame.K_LEFT, pygame.K_a):
                     command.direction = Direction.LEFT
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                command.mouse_clicked = True
+
         return command
+
+    def clean(self) -> None:
+        pygame.quit()
