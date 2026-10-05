@@ -19,7 +19,21 @@ class Cell:
     x: int
     y: int
     cell_type: CellType = CellType.WALL
-    consumes: Consumable = None
+    consumes: Consumable = []
+
+    @property
+    def is_corner(self):
+        corners = (
+            (1, 1),
+            (self._grid.width - 2, 1),
+            (1, self._grid.height - 2),
+            (self._grid.width - 2, self._grid.height - 2),
+        )
+
+        return (self.x, self.y) in corners
+
+    def remove_consumables(self):
+        self.consumes = []
 
 
 @dataclass(slots=True)
@@ -35,7 +49,7 @@ class MazeGrid:
 
     def is_wall(self, x: int, y: int):
         if 0 <= x < self.width and 0 <= y < self.height:
-            return self.grid[y][x].cell_type == CellType.WALL
+            return self.grid[y][x].cell_type is CellType.WALL
         return True
 
 
@@ -43,14 +57,18 @@ class MazeAdapter:
     def __init__(self):
         self._generator_cls = MazeGenerator
 
-    def generate_level_maze(self, level: LevelConfig) -> MazeGrid:
+    def generate_maze(self, level: LevelConfig) -> MazeGrid:
         tmp_stdout = io.StringIO()
 
         try:
             with redirect_stdout(tmp_stdout):
                 entry_cell = (0, level.height // 2)
                 exit_cell = (level.width - 1, level.height // 2)
-                original_maze = self._generator_cls(size=(level.width, level.height), seed=level.seed, entry_cell=entry_cell, exit_cell=exit_cell)
+                original_maze = self._generator_cls(
+                    size=(level.width, level.height),
+                    seed=level.seed, entry_cell=entry_cell,
+                    exit_cell=exit_cell
+                    )
 
             warn_msgs = tmp_stdout.getvalue()
 

@@ -25,13 +25,12 @@ class Config:
     width: int = 15
     height: int = 15
     lives: int = 3
-    pacgum: int = 42
     points_per_pacgum: int = 10
     points_per_super_pacgum: int = 50
     points_per_ghost: int = 200
     frightened_duration: float = 8.0
     ghost_speed: float = 3.0
-    player_speed: float = 3.0
+    pacman_speed: float = 3.0
     seed: int = 42
     level_max_time: int = 90
     highscore_filename: str = Path("highscores.json")
@@ -126,13 +125,12 @@ class Config:
             "width": 15,
             "height": 15,
             "lives": 3,
-            "pacgum": 42,
             "points_per_pacgum": 10,
             "points_per_super_pacgum": 50,
             "points_per_ghost": 200,
             "frightened_duration": 8.0,
             "ghost_speed": 3.0,
-            "player_speed": 3.0,
+            "pacman_speed": 3.0,
             "seed": 42,
             "level_max_time": 90,
             "highscore_filename": Path("highscores.json")
@@ -168,12 +166,39 @@ class Config:
         validate_int_field("width", min_val=7)
         validate_int_field("height", min_val=7)
         validate_int_field("lives", min_val=1)
-        validate_int_field("pacgum", min_val=0)
         validate_int_field("points_per_pacgum", min_val=0)
         validate_int_field("points_per_super_pacgum", min_val=0)
         validate_int_field("points_per_ghost", min_val=0)
         validate_int_field("seed")
         validate_int_field("level_max_time", strictly_positive=True)
+
+        if "frightened_duration" in data:
+            match data["frightened_duration"]:
+                case (float() | int()) as value if value >= 0:
+                    clamped["frightened_duration"] = value
+                case _:
+                    warn()
+        else:
+            warn()
+        
+        if "ghost_speed" in data:
+            match data["ghost_speed"]:
+                case (float() | int()) as value if value >= 0:
+                    clamped["ghost_speed"] = data["ghost_speed"]
+                case _:
+                    warn()
+        else:
+            warn()
+
+        if "pacman_speed" in data:
+            match data["pacman_speed"]:
+                case (float() | int()) as value if value >= 0:
+                    clamped["pacman_speed"] = data["pacman_speed"]
+                case _:
+                    warn()
+        else:
+            warn()
+
 
         if "highscore_filename" not in data:
             warn(
@@ -195,14 +220,10 @@ class Config:
         return clamped
 
     def generate_level(self, level: int) -> LevelConfig:
-        step = (level - 1) // 2
         return LevelConfig(
             level=level,
-            width=min(27, self.width + (step * 2)),
-            height=min(25, self.height + (step * 2)),
-            pacgum=self.pacgum + (level - 1) * 8,
             level_max_time=max(45, self.level_max_time - (level - 1) * 3),
             frightened_duration=max(2.0, self.frightened_duration - (level - 1) * 0.5),
             ghost_speed=min(4.8, self.ghost_speed + (level - 1) * 0.1),
-            seed=self.seed if level == 0 else random.randint(1, 1_000_000)
+            seed=self.seed if level == 1 else random.randint(1, 1_000_000)
         )

@@ -1,0 +1,23 @@
+1.config.py -> it is not yet complete. [done]
+2.must have:
+
+engine.get_renderables()
+
+return generic objects:
+
+[
+    Renderable(...),
+    Renderable(...),
+    Renderable(...),
+    ...
+]
+
+The renderer doesn't need:
+
+if isinstance(obj, PacMan):
+
+or:
+
+if ghost.state == ...
+
+3. entry and exit maze.
