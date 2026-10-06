@@ -9,25 +9,24 @@ class GameStateManager:
 
     def __init__(self) -> None:
 
-        self.active_screen: Screen | None = None
-        self.screens: dict[str, Screen] = {}
-        self.set_screens()
+        self._active_screen: Screen | None = None
+        self._screens: dict[str, Screen] = {}
+        self._create_screens()
 
     def handle_input(self, command: InputCommand) -> None:
-        self.active_screen.handle_input(command)
+        self._active_screen.handle_input(command)
 
     def change_state(self, new_state: str) -> None:
-        if new_state in self.screens:
-            self.active_screen = self.screens[new_state]
+        if new_state in self._screens:
+            self._active_screen = self._screens[new_state]
 
     def update(self, dt: float) -> None:
-        self.active_screen.update(dt)
+        self._active_screen.update(dt)
 
     def render(self, render: Renderer) -> None:
-        self.active_screen.render(render)
+        self._active_screen.render(render)
 
-    def set_screens(self) -> None:
+    def _create_screens(self) -> None:
 
-        self.screens['main_menu'] = MainMenuScreen()
-        self.screens['play'] = PlayScreen()
-        self.active_screen = self.screens['main_menu']
+        self._screens['main_menu'] = MainMenuScreen()
+        self._screens['play'] = PlayScreen()

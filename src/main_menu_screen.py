@@ -8,7 +8,7 @@ class MainMenuScreen(Screen):
 
     def __init__(self):
 
-        self._keys = ['logo', 'play', 'high', 'quit']
+        self._keys = ['logo', 'play', 'high', 'instrcts', 'quit']
         self._imgs: dict[str, pygame.Surface] = {}
         self._img_x_y: dict[str, tuple[int, int]] = {}
         self._button_rects: dict[str, pygame.Rect] = {}
@@ -56,8 +56,8 @@ class MainMenuScreen(Screen):
 
     def _get_images(self) -> None:
 
-        img_names = ['menu_logo.png', 'play_button.png',
-                     'highscores_button.png', 'quit_button.png']
+        img_names = ['logo.png', 'play.png', 'high.png',
+                     'instruction.png', 'quit.png']
 
         for key, name in zip(self._keys, img_names):
             self._imgs[key] = self._load_img(name)
@@ -65,10 +65,11 @@ class MainMenuScreen(Screen):
     def _calculate_pos(self) -> None:
 
         offsets = {
-            'logo': (-400, -300),
-            'play': (-60, -100),
-            'high': (-105, -20),
-            'quit': (-60, 300)
+            'logo': (-405, -300),
+            'play': (-55, -60),
+            'high': (-120, 40),
+            'instrcts': (-135, 150),
+            'quit': (-60, 270)
         }
 
         for key in self._keys:

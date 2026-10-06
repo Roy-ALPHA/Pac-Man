@@ -18,6 +18,7 @@ class PacmanApp:
 
     def run(self) -> None:
 
+        self.state_manager.change_state('main_menu')
         clock = pygame.time.Clock()
 
         while self.is_running:
