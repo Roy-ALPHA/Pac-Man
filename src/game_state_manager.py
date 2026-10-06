@@ -1,5 +1,6 @@
 from ui.inputhandler import InputCommand
 from ui.screen import Screen
+from ui.renderer import Renderer
 from main_menu_screen import MainMenuScreen
 from playscreen import PlayScreen
 
@@ -22,8 +23,8 @@ class GameStateManager:
     def update(self, dt: float) -> None:
         self.active_screen.update(dt)
 
-    def render(self) -> None:
-        self.active_screen.render()
+    def render(self, render: Renderer) -> None:
+        self.active_screen.render(render)
 
     def set_screens(self) -> None:
 

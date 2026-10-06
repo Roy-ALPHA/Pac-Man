@@ -6,10 +6,17 @@ from .renderer import Renderer
 class Screen(ABC):
 
     door_w = 0
-    door_fully_close = False
     screen_w = 0
     screen_h = 0
-    renderer: None | Renderer = None
+    door_closed = False
+
+    @property
+    def middle_w(self) -> int:
+        return self.screen_w // 2
+
+    @property
+    def middle_h(self) -> int:
+        return self.screen_h // 2
 
     @abstractmethod
     def handle_input(self, command: InputCommand) -> None:
@@ -20,5 +27,5 @@ class Screen(ABC):
         pass
 
     @abstractmethod
-    def render(self) -> None:
+    def render(self, render: Renderer) -> None:
         pass

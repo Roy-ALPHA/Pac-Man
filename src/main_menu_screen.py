@@ -1,4 +1,5 @@
 from ui.screen import Screen
+from ui.renderer import Renderer
 from ui.inputhandler import InputCommand
 import pygame
 
@@ -7,97 +8,107 @@ class MainMenuScreen(Screen):
 
     def __init__(self):
 
-        self.images: dict[str, pygame.Surface] = {}
-        self.image_positions: dict[str, tuple[int, int]] = {}
-        self.button_rects: dict[str, pygame.Rect] = {}
-        self.get_images()
-        self.calculate_positions()
-        self.create_hitboxes()
+        self._keys = ['logo', 'play', 'high', 'quit']
+        self._imgs: dict[str, pygame.Surface] = {}
+        self._img_x_y: dict[str, tuple[int, int]] = {}
+        self._button_rects: dict[str, pygame.Rect] = {}
+        self._get_images()
+        self._calculate_pos()
+        self._create_hitboxes()
 
     def handle_input(self, command: InputCommand) -> None:
 
         mouse_coord = pygame.mouse.get_pos()
 
-        if command.mouse_clicked and Screen.door_fully_close:
+        if command.mouse_clicked and Screen.door_closed:
 
-            if self.button_rects['quit'].collidepoint(mouse_coord):
+            if self._button_rects['quit'].collidepoint(mouse_coord):
                 command.quit = True
 
-            elif self.button_rects['play'].collidepoint(mouse_coord):
+            elif self._button_rects['play'].collidepoint(mouse_coord):
                 command.play = True
 
     def update(self, dt: float) -> None:
 
         if Screen.door_w < 600:
             Screen.door_w += 900 * (dt / 1000)
+
         else:
-            self.update_mouse_cursor()
-            Screen.door_fully_close = True
+            self._update_cursor()
+            Screen.door_closed = True
 
-    def render(self) -> None:
+    def render(self, render: Renderer) -> None:
 
-        Screen.renderer.clear()
-        self.close_door()
-        if Screen.door_fully_close:
-            self.draw_ui_elements()
+        render.clear()
+        self.close_door(render)
 
-    def get_images(self) -> None:
+        if Screen.door_closed:
+            self._draw_ui(render)
 
-        renderer = Screen.renderer
-        self.images['logo'] = renderer.get_image('menu_logo.png')
-        self.images['play'] = renderer.get_image('play_button.png')
-        self.images['high'] = renderer.get_image('highscores_button.png')
-        self.images['quit'] = renderer.get_image('quit_button.png')
+    def close_door(self, render: Renderer) -> None:
 
-    def calculate_positions(self) -> None:
+        render.draw_door(0, Screen.door_w)
+        render.draw_door(Screen.screen_w - Screen.door_w, Screen.door_w)
 
-        self.image_positions['logo'] = (Screen.screen_w // 2 - 400,
-                                        Screen.screen_h // 2 - 300)
-        self.image_positions['play'] = (Screen.screen_w // 2 - 60,
-                                        Screen.screen_h // 2 - 100)
-        self.image_positions['high'] = (Screen.screen_w // 2 - 105,
-                                        Screen.screen_h // 2 - 20)
-        self.image_positions['quit'] = (Screen.screen_w // 2 - 60,
-                                        Screen.screen_h // 2 + 300)
+    @staticmethod
+    def _load_img(name: str) -> pygame.Surface:
+        return pygame.image.load(f"assets/{name}")
 
-    def close_door(self) -> None:
+    def _get_images(self) -> None:
 
-        Screen.renderer.draw_door(0, Screen.door_w)
-        Screen.renderer.draw_door(Screen.screen_w - Screen.door_w,
-                                  Screen.door_w)
+        img_names = ['menu_logo.png', 'play_button.png',
+                     'highscores_button.png', 'quit_button.png']
 
-    def draw_ui_elements(self) -> None:
+        for key, name in zip(self._keys, img_names):
+            self._imgs[key] = self._load_img(name)
 
-        renderer = Screen.renderer
-        renderer.blit_window(self.images['logo'], self.image_positions['logo'])
-        renderer.blit_window(self.images['play'], self.image_positions['play'])
-        renderer.blit_window(self.images['high'], self.image_positions['high'])
-        renderer.blit_window(self.images['quit'], self.image_positions['quit'])
+    def _calculate_pos(self) -> None:
 
-    def create_hitboxes(self) -> None:
+        offsets = {
+            'logo': (-400, -300),
+            'play': (-60, -100),
+            'high': (-105, -20),
+            'quit': (-60, 300)
+        }
 
-        self.button_rects['play'] = pygame.Rect(
-            self.image_positions['play'][0], self.image_positions['play'][1],
-            self.images['play'].get_width(), self.images['play'].get_height())
+        for key in self._keys:
+            offset_x, offset_y = offsets[key]
+            self._img_x_y[key] = (
+                self.middle_w + offset_x,
+                self.middle_h + offset_y)
 
-        self.button_rects['high'] = pygame.Rect(
-            self.image_positions['high'][0], self.image_positions['high'][1],
-            self.images['high'].get_width(), self.images['high'].get_height())
+    def _draw_ui(self, render: Renderer) -> None:
 
-        self.button_rects['quit'] = pygame.Rect(
-            self.image_positions['quit'][0], self.image_positions['quit'][1],
-            self.images['quit'].get_width(), self.images['quit'].get_height())
+        for key in self._keys:
+            render.blit_window(self._imgs[key], self._img_x_y[key])
 
-    def is_hovering_any_button(self, mouse_coord: tuple[int, int]) -> bool:
-        return (self.button_rects['play'].collidepoint(mouse_coord) or
-                self.button_rects['high'].collidepoint(mouse_coord) or
-                self.button_rects['quit'].collidepoint(mouse_coord))
+    def _img_info(self, key: str, x_y_flag: bool = False) -> tuple[int, int]:
 
-    def update_mouse_cursor(self) -> None:
+        if x_y_flag:
+            return self._img_x_y[key]
+        return (self._imgs[key].get_width(), self._imgs[key].get_height())
+
+    def _create_hitboxes(self) -> None:
+
+        for key in self._keys[1:]:
+            x, y = self._img_info(key, True)
+            w, h = self._img_info(key)
+            self._button_rects[key] = pygame.Rect(x, y, w, h)
+
+    def _hovering_button(self, mouse_coord: tuple[int, int]) -> bool:
+
+        for key in self._keys[1:]:
+
+            if self._button_rects[key].collidepoint(mouse_coord):
+                return True
+
+        return False
+
+    def _update_cursor(self) -> None:
 
         mouse_coord = pygame.mouse.get_pos()
 
-        if self.is_hovering_any_button(mouse_coord):
+        if self._hovering_button(mouse_coord):
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
         else:
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
