@@ -26,12 +26,25 @@ class FrightenGhostsEffect(Effect):
 
 class Consumable(ABC):
 
+    _counter = 0
+
     def __init__(self, effects):
         self._effects = effects
+        Consumable._counter += 1
+
+    @property
+    def still_any_consumables(self):
+        return not Consumable._counter
+
+    @classmethod
+    def reset_counter(cls):
+        cls._counter = 0
 
     def effect(self, engine):
         for effect in self._effects:
             effect.apply(engine)
+            if Consumable._counter > 0:
+                Consumable._counter -= 1
 
 
 class PacGum(Consumable):

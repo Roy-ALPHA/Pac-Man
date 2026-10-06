@@ -134,6 +134,9 @@ class PacMan(Entity):
     def is_invincible(self):
         return self._invincible
 
+    def can_eat_ghost(self, ghost):
+        return ghost == self and ghost.is_frighten
+
     def toggle_invincibility(self):
         self._invincible = not self._invincible
 
@@ -157,16 +160,19 @@ class PacMan(Entity):
 
 
 class Ghost:
-    def __init__(self, spawn_x, spawn_y, speed, grid, strategy, pacman, frightened_timer):
+    def __init__(self, spawn_x, spawn_y, speed, grid, strategy, pacman):
         super().__init__(spawn_x, spawn_y, speed, grid)
         self._state = GhostState.DIED
         self._strategy = strategy
         self._pacman = pacman
-        self._frightened_timer = frightened_timer
 
     @property
     def is_frighten(self):
         return self._state is GhostState.FRIGHTENED
+
+    @property
+    def state(self):
+        return self._state
 
     def _request_direction(self):
         self._next_direction = self._strategy.compute_next_move(
@@ -176,6 +182,13 @@ class Ghost:
     def switch_state(self, new_state):
         self._state = new_state
 
+    def can_eat_pacman(self):
+        return self._pacman == self and not self._pacman.is_invincible and self.state in {GhostState.WANDER, GhostState.CHASE}
+
+    def active_frighten_mode(self, duration):
+        self.switch_state(GhostState.FRIGHTENED)
+        self._frightened_time = duration
+
     def update(self, dt):
         distance = self._speed * dt
 
@@ -183,6 +196,10 @@ class Ghost:
         distance_to_tile_center = math.dist((self._x, self._y), self.tile)
 
         match self._state:
+            case GhostState.FRIGHTENED:
+                self._frightened_time -= dt
+                if self._frightened_time <= 0:
+                    self.switch_state(GhostState.WANDER)
             case GhostState.DIED if self.tile == (self._spawn_x, self._spawn_y):
                 self.switch_state(GhostState.WANDER)
             case GhostState.WANDER if dist <= 10:
