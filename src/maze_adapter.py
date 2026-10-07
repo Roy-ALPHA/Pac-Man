@@ -31,9 +31,19 @@ class Cell:
         )
 
         return (self.x, self.y) in corners
+    
+    def is_wall(self):
+        return self.cell_type is CellType.WALL
 
     def remove_consumables(self):
         self.consumes = []
+
+    def add_consumable(self, consumable):
+        self.consumes.append(consumable)
+
+    @property
+    def can_spawn_consumable(self):
+        return not self.is_corner and not self.is_wall
 
 
 @dataclass(slots=True)
@@ -49,7 +59,7 @@ class MazeGrid:
 
     def is_wall(self, x: int, y: int):
         if 0 <= x < self.width and 0 <= y < self.height:
-            return self.grid[y][x].cell_type is CellType.WALL
+            return self.grid[y][x].is_wall
         return True
 
 

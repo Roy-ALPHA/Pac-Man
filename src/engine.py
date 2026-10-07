@@ -1,6 +1,5 @@
 import entities
 import ghost_ai
-from maze_adapter import CellType
 import consumables
 from enum import Enum, auto
 
@@ -10,6 +9,7 @@ class EngineState(Enum):
     RESPAWNING = auto()
     GAME_OVER = auto()
     GAME_WON = auto()
+    STOPPED = auto()
 
 
 class Cheat(Enum):
@@ -48,9 +48,18 @@ class GameEngine:
     def state(self):
         return self._state
 
+    def decrease_pacgums(self):
+        self._pacgums -= 1
+
     @property
-    def get_score(self):
+    def score(self):
         return self._score
+
+    def stop(self):
+        self._state = EngineState.STOPPED
+
+    def resume(self):
+        self._state = EngineState.PLAYING
 
     def activate_cheat(self, cheat: Cheat):
         match cheat:
@@ -60,6 +69,7 @@ class GameEngine:
                 self._pacman.increase_speed()
             case Cheat.LEVEL_SKIP:
                 self._skip_level = True
+                consumables.Consumable.reset_counter()
             case Cheat.EXTRA_LIVES:
                 self._pacman.add_life()
             case Cheat.GHOST_FREEZE:
@@ -67,7 +77,7 @@ class GameEngine:
                     ghost.switch_state(entities.GhostState.FROZEN)
 
     def _load_level(self):
-        self._pacgums = 0
+        consumables.Consumable.reset_counter()
         levelconfig = self._config.generate_level(self._cur_level)
         self._grid = self._maze_adapter.generate_maze(levelconfig)
         self._levelconfig = levelconfig
@@ -107,7 +117,8 @@ class GameEngine:
             self._grid,
             ghost_ai.InkyStrategy(),
             self._pacman,
-            self._levelconfig.frightened_duration
+            self._levelconfig.frightened_duration,
+            blinky
         )
         clyde = entities.Ghost(
             *corners["bottom_right"],
@@ -120,16 +131,14 @@ class GameEngine:
         self._ghosts = [pinky, blinky, inky, clyde]
         for row in self._grid.grid:
             for cell in row:
-                if cell.cell_type is CellType.CORRIDOR and not cell.is_corner:
-                    cell.consumes = [consumables.PacGum([consumables.ScoreEffect(self._config.points_per_pacgum)])]
-                    self._pacgums += 1
+                if cell.can_spawn_consumable:
+                    cell.add_consumable(consumables.PacGum([consumables.ScoreEffect(self._config.points_per_pacgum)]))
                 if cell.is_corner:
-                    cell.consumes = [consumables.SuperPacGum([
+                    cell.add_consumable(consumables.SuperPacGum([
                         consumables.FrightenGhostsEffect(self._levelconfig.frightened_duration),
                         consumables.ScoreEffect(self._config.points_per_super_pacgum)
-                        ])]
+                        ]))
         self._is_game_over = False
-        self._frightened_timer = None
         self._level_time = self._levelconfig.level_max_time
         self._respawn_timer = 3.0
         self._is_level_loaded = True
@@ -143,23 +152,22 @@ class GameEngine:
         cell = self._grid.grid[pacman_y][pacman_x]
         for consumable in cell.consumes:
             consumable.effect(self)
-            if isinstance(consumable, consumables.PacGum):
-                self._pacgums -= 1
         cell.remove_consumables()
 
         for ghost in self._ghosts:
-            if self._pacman == ghost and not self._pacman.is_invincible:
-                match ghost.is_frighten:
-                    case True:
-                        self.add_score(self._config.points_per_ghost)
-                        ghost.switch_state(entities.GhostState.DIED)
-                    case False:
-                        if self._pacman.is_alive:
-                            self._pacman.lose_life()
-                            self._respawn()
-                        else:
-                            self._is_game_over = True
-                            self._state = EngineState.GAME_OVER
+            if self._pacman.can_eat_ghost(ghost):
+                self.add_score(self._config.points_per_ghost)
+                ghost.switch_state(entities.GhostState.DIED)
+            elif ghost.can_eat_pacman():
+                if self._pacman.is_alive:
+                    self._pacman.lose_life()
+                    if self._pacman.is_alive:
+                        self._respawn()
+
+            if not self._pacman.is_alive:
+                self._is_game_over = True
+                self._state = EngineState.GAME_OVER
+                break
 
     def _respawn(self):
         self._pacman.respawn()
@@ -181,15 +189,13 @@ class GameEngine:
 
     @property
     def is_level_completed(self):
-        return not self._pacgums or self._skip_level
+        return not consumables.Consumable.still_any_consumables or self._skip_level
 
     def trigger_frightened_mode(self, duration):
         for ghost in self._ghosts:
-            ghost.switch_state(entities.GhostState.FRIGHTENED)
+            ghost.active_frighten_mode(duration)
 
-        self._frightened_timer = duration
-
-    def _check_timer(self, dt):
+    def _level_timer(self, dt):
         if self.is_game_over or self.is_game_won or self.is_level_completed:
             return
 
@@ -199,31 +205,33 @@ class GameEngine:
             self._is_game_over = True
             self._state = EngineState.GAME_OVER
 
-        if self._frightened_timer is not None:
-            self._frightened_timer -= dt
-            if self._frightened_timer <= 0:
-                for ghost in self._ghosts:
-                    ghost.switch_state(entities.GhostState.WANDER)
-                self._frightened_timer = None
-
     def tick(self, dt, pacman_direction):
         match self._state:
-            case EngineState.RESPAWNING if self._is_level_loaded:
+            case EngineState.STOPPED | EngineState.GAME_OVER | EngineState.GAME_WON:
+                return
+
+            case EngineState.RESPAWNING:
+                if not self._is_level_loaded:
+                    self._load_level()
+                    return
+
                 self._respawn_timer -= dt
                 if self._respawn_timer <= 0:
                     self._state = EngineState.PLAYING
-            case EngineState.RESPAWNING if not self._is_level_loaded:
-                self._load_level()
+
             case EngineState.PLAYING:
                 self._pacman.request_direction(pacman_direction)
                 self._pacman.update(dt)
+
                 for ghost in self._ghosts:
                     ghost.update(dt)
+
                 self._check_collisions()
-                self._check_timer(dt)
+                self._level_timer(dt)
+
                 if self.is_game_won:
                     self._state = EngineState.GAME_WON
-                    return
-                if self.is_level_completed:
+                elif self.is_level_completed:
                     self._cur_level += 1
+                    self._is_level_loaded = False
                     self._state = EngineState.RESPAWNING

@@ -11,9 +11,6 @@ import random
 @dataclass(frozen=True)
 class LevelConfig:
     level: int
-    width: int
-    height: int
-    pacgum: int
     level_max_time: int
     frightened_duration: float
     ghost_speed: float
@@ -180,7 +177,7 @@ class Config:
                     warn()
         else:
             warn()
-        
+
         if "ghost_speed" in data:
             match data["ghost_speed"]:
                 case (float() | int()) as value if value >= 0:
@@ -198,7 +195,6 @@ class Config:
                     warn()
         else:
             warn()
-
 
         if "highscore_filename" not in data:
             warn(
