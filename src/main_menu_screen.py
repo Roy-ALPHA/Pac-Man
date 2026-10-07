@@ -10,6 +10,7 @@ class MainMenuScreen(Screen):
 
         self._keys = ['logo', 'play', 'high', 'instrcts', 'quit']
         self._imgs: dict[str, pygame.Surface] = {}
+        self._hover_imgs: dict[str: pygame.Surface] = {}
         self._img_x_y: dict[str, tuple[int, int]] = {}
         self._button_rects: dict[str, pygame.Rect] = {}
         self._get_images()
@@ -62,6 +63,10 @@ class MainMenuScreen(Screen):
         for key, name in zip(self._keys, img_names):
             self._imgs[key] = self._load_img(name)
 
+        for key, name in zip(self._keys[1:], img_names[1:]):
+            hover_name = name.replace('.png', '_hover.png')
+            self._hover_imgs[key] = self._load_img(hover_name)
+
     def _calculate_pos(self) -> None:
 
         offsets = {
@@ -78,10 +83,19 @@ class MainMenuScreen(Screen):
                 self.middle_w + offset_x,
                 self.middle_h + offset_y)
 
+    def _is_hover(self, key: str) -> bool:
+        
+        mouse_coord = pygame.mouse.get_pos()
+    
+        return key != 'logo' and self._button_rects[key].collidepoint(mouse_coord)
+
     def _draw_ui(self, render: Renderer) -> None:
 
         for key in self._keys:
-            render.blit_window(self._imgs[key], self._img_x_y[key])
+            if self._is_hover(key):
+                render.blit_window(self._hover_imgs[key], self._img_x_y[key])
+            else:
+                render.blit_window(self._imgs[key], self._img_x_y[key])
 
     def _img_info(self, key: str, x_y_flag: bool = False) -> tuple[int, int]:
 
