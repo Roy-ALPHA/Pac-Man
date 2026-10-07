@@ -1,15 +1,8 @@
 from dataclasses import dataclass
-from enum import Enum, auto
+from entities import Direction
 import pygame
 
 
-class Direction(Enum):
-
-    NONE = auto()
-    UP = auto()
-    DOWN = auto()
-    LEFT = auto()
-    RIGHT = auto()
 
 
 @dataclass
