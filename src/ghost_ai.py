@@ -1,12 +1,10 @@
 from abc import ABC, abstractmethod
-from .entities import Direction, GhostState
+from .entities import Direction, GhostState, PRIORITY_DIRECTIONS
 import random
 import math
 
 
 class GhostStrategy(ABC):
-
-    PRIORITY_DIRECTIONS = [Direction.UP, Direction.LEFT, Direction.DOWN, Direction.RIGHT]
 
     @staticmethod
     def _go_to(from_coor, to_coor, opposite, maze):
@@ -14,7 +12,7 @@ class GhostStrategy(ABC):
 
         valid_moves = []
 
-        for direction in BlinkyStrategy.PRIORITY_DIRECTIONS:
+        for direction in PRIORITY_DIRECTIONS:
             if direction is opposite:
                 continue
 
@@ -37,7 +35,7 @@ class GhostStrategy(ABC):
         opposite = ghost.cur_direction.opposite()
         valid_moves = [
             direction
-            for direction in GhostStrategy.PRIORITY_DIRECTIONS
+            for direction in PRIORITY_DIRECTIONS
             if not maze.is_wall(cur_x+direction.dx, cur_y+direction.dy) and direction is not opposite
             ]
 
@@ -52,7 +50,7 @@ class GhostStrategy(ABC):
 
         valid_moves = []
 
-        for direction in GhostStrategy.PRIORITY_DIRECTIONS:
+        for direction in PRIORITY_DIRECTIONS:
 
             next_x, next_y = (direction.dx + ghost_x, direction.dy + ghost_y)
             if maze.is_wall(next_x, next_y):

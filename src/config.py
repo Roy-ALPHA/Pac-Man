@@ -2,9 +2,10 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 from typing import Any
-from errors import PacmanConfigWarning
+from .errors import PacmanConfigWarning
 from lark import Lark
 from warnings import warn
+from .maze_adapter import MazeAdapter
 import random
 
 
@@ -31,6 +32,10 @@ class Config:
     seed: int = 42
     level_max_time: int = 90
     highscore_filename: str = Path("highscores.json")
+
+    def __post_init__(self):
+        MazeAdapter.set_maze_size((self.width, self.height))
+
 
     @classmethod
     def from_file(cls, path: Path) -> "Config":
@@ -133,7 +138,7 @@ class Config:
             "highscore_filename": Path("highscores.json")
         }
 
-        def validate_int_field(key: str, min_val: int | None = None, strictly_positive: bool = False):
+        def validate_int_field(key: str, min_val: int | None = None, max_val: int | None = None):
             if key not in data:
                 warn(
                     f"Missing '{key}' in config. Using default: {clamped[key]}.",
@@ -147,13 +152,13 @@ class Config:
 
             if is_valid and min_val is not None:
                 is_valid = val >= min_val
-            elif is_valid and strictly_positive:
-                is_valid = val > 0
+            elif is_valid and max_val is not None:
+                is_valid = val <= max_val
 
             if is_valid:
                 clamped[key] = val
             else:
-                condition_msg = f">= {min_val}" if min_val is not None else ("> 0" if strictly_positive else "an integer")
+                condition_msg = f">= {min_val}" if min_val is not None else (f"<= {max_val}" if max_val is not None else "an integer")
                 warn(
                     f"Invalid value for '{key}': got {val!r}, expected {condition_msg}. Using default: {clamped[key]}.",
                     category=PacmanConfigWarning,
@@ -167,7 +172,7 @@ class Config:
         validate_int_field("points_per_super_pacgum", min_val=0)
         validate_int_field("points_per_ghost", min_val=0)
         validate_int_field("seed")
-        validate_int_field("level_max_time", strictly_positive=True)
+        validate_int_field("level_max_time", min_val=0)
 
         if "frightened_duration" in data:
             match data["frightened_duration"]:

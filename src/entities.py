@@ -37,6 +37,9 @@ class Direction(Enum):
         return opposites[self]
 
 
+PRIORITY_DIRECTIONS = [Direction.UP, Direction.LEFT, Direction.DOWN, Direction.RIGHT]
+
+
 class Entity(ABC):
     def __init__(self, spawn_x, spawn_y, speed, grid):
         self._spawn_x = spawn_x
@@ -102,7 +105,7 @@ class Entity(ABC):
             return
 
         if self._cur_direction.opposite() is self._next_direction:
-            self.move(distance, self._next_direction)
+            self._move(distance, self._next_direction)
             self._cur_direction = self._next_direction
             self._next_direction = Direction.NONE
             return
@@ -159,12 +162,13 @@ class PacMan(Entity):
         self._calc_movement(distance)
 
 
-class Ghost:
-    def __init__(self, spawn_x, spawn_y, speed, grid, strategy, pacman):
+class Ghost(Entity):
+    def __init__(self, spawn_x, spawn_y, speed, grid, strategy, pacman, blinky=None):
         super().__init__(spawn_x, spawn_y, speed, grid)
         self._state = GhostState.DIED
         self._strategy = strategy
         self._pacman = pacman
+        self._blinky = blinky
 
     @property
     def is_frighten(self):
@@ -174,9 +178,9 @@ class Ghost:
     def state(self):
         return self._state
 
-    def _request_direction(self):
+    def _request_direction(self, blinky=None):
         self._next_direction = self._strategy.compute_next_move(
-            self, self._pacman, self._grid
+            self, self._pacman, self._grid, blinky
         )
 
     def switch_state(self, new_state):
@@ -213,6 +217,6 @@ class Ghost:
             self.switch_state(GhostState.WANDER)
 
         if not self.can_move(self._cur_direction) or not distance_to_tile_center:
-            self._request_direction()
+            self._request_direction(self._blinky)
 
         self._calc_movement(distance)

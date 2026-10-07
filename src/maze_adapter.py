@@ -1,12 +1,11 @@
 from mazegenerator import MazeGenerator
-from config import LevelConfig
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
-from consumables import Consumable
+from .consumables import Consumable
 import io
 from contextlib import redirect_stdout
 import warnings
-from errors import MazeAdapterWarning
+from .errors import MazeAdapterWarning
 
 
 class CellType(Enum):
@@ -19,19 +18,19 @@ class Cell:
     x: int
     y: int
     cell_type: CellType = CellType.WALL
-    consumes: Consumable = []
+    consumes: Consumable = field(default_factory=list)
 
-    @property
-    def is_corner(self):
+    def is_corner(self, width, height):
         corners = (
             (1, 1),
-            (self._grid.width - 2, 1),
-            (1, self._grid.height - 2),
-            (self._grid.width - 2, self._grid.height - 2),
+            (width - 2, 1),
+            (1, height - 2),
+            (width - 2, height - 2),
         )
 
         return (self.x, self.y) in corners
-    
+
+    @property
     def is_wall(self):
         return self.cell_type is CellType.WALL
 
@@ -41,9 +40,6 @@ class Cell:
     def add_consumable(self, consumable):
         self.consumes.append(consumable)
 
-    @property
-    def can_spawn_consumable(self):
-        return not self.is_corner and not self.is_wall
 
 
 @dataclass(slots=True)
@@ -64,18 +60,28 @@ class MazeGrid:
 
 
 class MazeAdapter:
+
+    _width = None
+    _height = None
+
     def __init__(self):
         self._generator_cls = MazeGenerator
 
-    def generate_maze(self, level: LevelConfig) -> MazeGrid:
+    @classmethod
+    def set_maze_size(cls, size):
+        cls._width, cls._height = size
+
+    def generate_maze(self, level) -> MazeGrid:
+        maze_width, maze_height = MazeAdapter._width, MazeAdapter._height
+
         tmp_stdout = io.StringIO()
 
         try:
             with redirect_stdout(tmp_stdout):
-                entry_cell = (0, level.height // 2)
-                exit_cell = (level.width - 1, level.height // 2)
+                entry_cell = (0, maze_height // 2)
+                exit_cell = (maze_width - 1, maze_height // 2)
                 original_maze = self._generator_cls(
-                    size=(level.width, level.height),
+                    size=(maze_width, maze_height),
                     seed=level.seed, entry_cell=entry_cell,
                     exit_cell=exit_cell
                     )
@@ -87,8 +93,8 @@ class MazeAdapter:
 
             extended_maze = MazeAdapter._extract_corridors(original_maze.maze)
 
-            ext_x = 2 * level.width + 1
-            ext_y = 2 * level.height + 1
+            ext_x = 2 * maze_width + 1
+            ext_y = 2 * maze_height + 1
 
             return MazeGrid(
                 width=ext_x,

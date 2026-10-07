@@ -1,6 +1,6 @@
-import entities
-import ghost_ai
-import consumables
+from . import entities
+from . import ghost_ai
+from . import consumables
 from enum import Enum, auto
 
 
@@ -48,9 +48,6 @@ class GameEngine:
     def state(self):
         return self._state
 
-    def decrease_pacgums(self):
-        self._pacgums -= 1
-
     @property
     def score(self):
         return self._score
@@ -90,7 +87,7 @@ class GameEngine:
         center = (self._grid.width // 2, self._grid.height // 2)
 
         self._pacman = entities.PacMan(
-            *self._calc_spawn(self._grid, center),
+            *center,
             self._config.pacman_speed,
             self._grid,
             self._config.lives
@@ -100,16 +97,14 @@ class GameEngine:
             self._levelconfig.ghost_speed,
             self._grid,
             ghost_ai.PinkyStrategy(),
-            self._pacman,
-            self._levelconfig.frightened_duration
+            self._pacman
         )
         blinky = entities.Ghost(
             *corners["top_right"],
             self._levelconfig.ghost_speed,
             self._grid,
             ghost_ai.BlinkyStrategy(),
-            self._pacman,
-            self._levelconfig.frightened_duration
+            self._pacman
         )
         inky = entities.Ghost(
             *corners["bottom_left"],
@@ -117,7 +112,6 @@ class GameEngine:
             self._grid,
             ghost_ai.InkyStrategy(),
             self._pacman,
-            self._levelconfig.frightened_duration,
             blinky
         )
         clyde = entities.Ghost(
@@ -125,15 +119,16 @@ class GameEngine:
             self._levelconfig.ghost_speed,
             self._grid,
             ghost_ai.ClydeStrategy(),
-            self._pacman,
-            self._levelconfig.frightened_duration
+            self._pacman
         )
         self._ghosts = [pinky, blinky, inky, clyde]
         for row in self._grid.grid:
             for cell in row:
-                if cell.can_spawn_consumable:
+                is_wall = cell.is_wall
+                is_corner = cell.is_corner(self._grid.width, self._grid.height)
+                if not is_wall and not is_corner:
                     cell.add_consumable(consumables.PacGum([consumables.ScoreEffect(self._config.points_per_pacgum)]))
-                if cell.is_corner:
+                if is_corner:
                     cell.add_consumable(consumables.SuperPacGum([
                         consumables.FrightenGhostsEffect(self._levelconfig.frightened_duration),
                         consumables.ScoreEffect(self._config.points_per_super_pacgum)
