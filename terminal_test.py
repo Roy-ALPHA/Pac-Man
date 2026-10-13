@@ -35,9 +35,9 @@ def run_terminal_ui(stdscr, config, maze_adapter):
 
     engine = GameEngine(config, maze_adapter)
 
-    current_dir = entities.Direction.NONE
+    current_dir = entities.Direction.UP
     last_time = time.time()
-
+    # f = open("logs.txt", "w")
     while True:
         current_time = time.time()
         dt = current_time - last_time
@@ -54,7 +54,9 @@ def run_terminal_ui(stdscr, config, maze_adapter):
             pass
 
         # 2. Engine Step
+
         engine.tick(dt, current_dir)
+        # print(*[g.state for g in engine._ghosts], file=f)
 
         # 3. Render
         stdscr.erase()

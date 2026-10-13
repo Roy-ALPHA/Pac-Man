@@ -33,9 +33,9 @@ class Config:
     level_max_time: int = 90
     highscore_filename: str = Path("highscores.json")
 
-    def __post_init__(self):
-        MazeAdapter.set_maze_size((self.width, self.height))
-
+    @classmethod
+    def _set_maze_size(cls, width, height):
+        MazeAdapter.set_maze_size((width, height))
 
     @classmethod
     def from_file(cls, path: Path) -> "Config":
@@ -79,6 +79,7 @@ class Config:
                 return cls()
 
             clamped_data = cls._clamp_defaults(raw_dict)
+            cls._set_maze_size(clamped_data["width"], clamped_data["height"])
             return cls(**clamped_data)
 
         except json.JSONDecodeError as err:
@@ -131,7 +132,7 @@ class Config:
             "points_per_super_pacgum": 50,
             "points_per_ghost": 200,
             "frightened_duration": 8.0,
-            "ghost_speed": 3.0,
+            "ghost_speed": 10.0,
             "pacman_speed": 3.0,
             "seed": 42,
             "level_max_time": 90,
@@ -152,7 +153,7 @@ class Config:
 
             if is_valid and min_val is not None:
                 is_valid = val >= min_val
-            elif is_valid and max_val is not None:
+            if is_valid and max_val is not None:
                 is_valid = val <= max_val
 
             if is_valid:
@@ -179,27 +180,27 @@ class Config:
                 case (float() | int()) as value if value >= 0:
                     clamped["frightened_duration"] = value
                 case _:
-                    warn()
+                    warn
         else:
-            warn()
+            warn
 
         if "ghost_speed" in data:
             match data["ghost_speed"]:
                 case (float() | int()) as value if value >= 0:
                     clamped["ghost_speed"] = data["ghost_speed"]
                 case _:
-                    warn()
+                    warn
         else:
-            warn()
+            warn
 
         if "pacman_speed" in data:
             match data["pacman_speed"]:
                 case (float() | int()) as value if value >= 0:
                     clamped["pacman_speed"] = data["pacman_speed"]
                 case _:
-                    warn()
+                    warn
         else:
-            warn()
+            warn
 
         if "highscore_filename" not in data:
             warn(

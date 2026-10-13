@@ -88,11 +88,14 @@ class Entity(ABC):
         remaining = (center_x - self._x) * self._cur_direction.dx + (center_y - self._y) * self._cur_direction.dy
         if remaining <= 0 or distance >= remaining:
             self._x, self._y = float(center_x), float(center_y)
-            self._cur_direction = Direction.NONE
             if self.can_move(self._next_direction):
                 self._move(distance - max(0.0, remaining), self._next_direction)
                 self._cur_direction = self._next_direction
                 self._next_direction = Direction.NONE
+            elif self.can_move(self._cur_direction):
+                self._move(distance - max(0.0, remaining), self._cur_direction)
+            else:
+                self._cur_direction = Direction.NONE
         else:
             self._move(distance, self._cur_direction)
 
@@ -110,9 +113,9 @@ class Entity(ABC):
             self._next_direction = Direction.NONE
             return
 
-        if not self.can_move(self._cur_direction) or self._next_direction is not Direction.NONE:
+        if self.can_move(self._next_direction) and self._cur_direction is not self._next_direction:
             self._move_to_center_and_stop(distance)
-        else:
+        elif self.can_move(self._cur_direction):
             self._move(distance, self._cur_direction)
 
     def __eq__(self, other):
