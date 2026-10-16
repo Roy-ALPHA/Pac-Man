@@ -90,21 +90,24 @@ class GameEngine:
             *center,
             self._config.pacman_speed,
             self._grid,
-            self._config.lives
+            self._config.lives,
+            "pacman"
         )
         pinky = entities.Ghost(
             *corners["top_left"],
             self._levelconfig.ghost_speed,
             self._grid,
             ghost_ai.PinkyStrategy(),
-            self._pacman
+            self._pacman,
+            "Pinky"
         )
         blinky = entities.Ghost(
             *corners["top_right"],
             self._levelconfig.ghost_speed,
             self._grid,
             ghost_ai.BlinkyStrategy(),
-            self._pacman
+            self._pacman,
+            "Blinky"
         )
         inky = entities.Ghost(
             *corners["bottom_left"],
@@ -112,6 +115,7 @@ class GameEngine:
             self._grid,
             ghost_ai.InkyStrategy(),
             self._pacman,
+            "Inky",
             blinky
         )
         clyde = entities.Ghost(
@@ -119,7 +123,8 @@ class GameEngine:
             self._levelconfig.ghost_speed,
             self._grid,
             ghost_ai.ClydeStrategy(),
-            self._pacman
+            self._pacman,
+            "Clyde"
         )
         self._ghosts = [pinky, blinky, inky, clyde]
         for row in self._grid.grid:

@@ -1,7 +1,7 @@
 import curses
 import time
 from src import entities
-from src.engine import EngineState, GameEngine
+from src.engine import EngineState, GameEngine, Cheat
 
 # Mapping dyal les touches l Direction
 KEY_MAPPINGS = {
@@ -84,14 +84,20 @@ def run_terminal_ui(stdscr, config, maze_adapter):
                             stdscr.addstr(draw_y, draw_x, "· ", curses.color_pair(7))
 
             # Render Ghosts
-            ghost_colors = [2, 3, 4, 5]  # Red, Magenta, Cyan, Green
-            for idx, ghost in enumerate(engine._ghosts):
+            ghost_colors = {
+                "Blinky": 2,
+                "Pinky": 3,
+                "Inky": 4,
+                "Clyde": 5,
+            }
+
+            for ghost in engine._ghosts:
                 gx, gy = ghost.tile
                 char = "ᗣ "
                 color_idx = (
                     6
                     if ghost.state == entities.GhostState.FRIGHTENED
-                    else ghost_colors[idx % 4]
+                    else ghost_colors[ghost.name]
                 )
                 stdscr.addstr(gy + 3, gx * 2, char, curses.color_pair(color_idx))
 

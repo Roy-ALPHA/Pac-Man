@@ -41,7 +41,7 @@ PRIORITY_DIRECTIONS = [Direction.UP, Direction.LEFT, Direction.DOWN, Direction.R
 
 
 class Entity(ABC):
-    def __init__(self, spawn_x, spawn_y, speed, grid):
+    def __init__(self, spawn_x, spawn_y, speed, grid, name):
         self._spawn_x = spawn_x
         self._spawn_y = spawn_y
         self._x = spawn_x
@@ -50,6 +50,11 @@ class Entity(ABC):
         self._grid = grid
         self._cur_direction = Direction.NONE
         self._next_direction = Direction.NONE
+        self._name = name
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def cur_direction(self):
@@ -127,8 +132,8 @@ class Entity(ABC):
 
 
 class PacMan(Entity):
-    def __init__(self, spawn_x, spawn_y, speed, grid, lives):
-        super().__init__(spawn_x, spawn_y, speed, grid)
+    def __init__(self, spawn_x, spawn_y, speed, grid, lives, name):
+        super().__init__(spawn_x, spawn_y, speed, grid, name)
         self._lives = lives
         self._invincible = False
 
@@ -166,8 +171,8 @@ class PacMan(Entity):
 
 
 class Ghost(Entity):
-    def __init__(self, spawn_x, spawn_y, speed, grid, strategy, pacman, blinky=None):
-        super().__init__(spawn_x, spawn_y, speed, grid)
+    def __init__(self, spawn_x, spawn_y, speed, grid, strategy, pacman, name, blinky=None):
+        super().__init__(spawn_x, spawn_y, speed, grid, name)
         self._state = GhostState.DIED
         self._strategy = strategy
         self._pacman = pacman
@@ -196,11 +201,13 @@ class Ghost(Entity):
         self.switch_state(GhostState.FRIGHTENED)
         self._frightened_time = duration
 
+    def in_center(self, tolerance=0.02):
+        return abs((self._x % 1) - 0.5) < tolerance and abs((self._y % 1) - 0.5) < tolerance
+
     def update(self, dt):
         distance = self._speed * dt
 
         dist = math.dist(self.tile, self._pacman.tile)
-        distance_to_tile_center = math.dist((self._x, self._y), self.tile)
 
         match self._state:
             case GhostState.FRIGHTENED:
@@ -209,7 +216,7 @@ class Ghost(Entity):
                     self.switch_state(GhostState.WANDER)
             case GhostState.DIED if self.tile == (self._spawn_x, self._spawn_y):
                 self.switch_state(GhostState.WANDER)
-            case GhostState.WANDER if dist <= 10:
+            case GhostState.WANDER if dist <= 2000:
                 self.switch_state(GhostState.CHASE)
             case GhostState.CHASE if dist > 10:
                 self.switch_state(GhostState.WANDER)
@@ -219,7 +226,7 @@ class Ghost(Entity):
         if self._pacman.is_invincible and self._state not in {GhostState.WANDER, GhostState.FRIGHTENED}:
             self.switch_state(GhostState.WANDER)
 
-        if not self.can_move(self._cur_direction) or not distance_to_tile_center:
-            self._request_direction(self._blinky)
+        # if self.in_center():
+        self._request_direction(self._blinky)
 
         self._calc_movement(distance)

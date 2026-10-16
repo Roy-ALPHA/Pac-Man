@@ -3,7 +3,7 @@ from .entities import GhostState, PRIORITY_DIRECTIONS, Direction
 import random
 import math
 
-# f = open("logs.txt", "w")
+f = open("logs.txt", "w")
 
 
 class GhostStrategy(ABC):
@@ -40,117 +40,64 @@ class GhostStrategy(ABC):
 
     @staticmethod
     def _go_to(from_coor, to_coor, opposite, maze, test=None):
+        target = GhostStrategy.closer_corridor(to_coor, maze)
 
-        # if from_coor == to_coor:
-        #     return Direction.NONE
+        if from_coor == target:
+            return GhostStrategy._wander(from_coor, opposite, maze)
 
-        # to_coor = GhostStrategy.closer_corridor(to_coor, maze)
+        def search(with_opposite):
+            visited = {from_coor}
+            queue = [from_coor]
 
-        # queue = [from_coor]
-        # visited = {from_coor}
-
-        # tracker = {
-        #     from_coor: None
-        # }
-
-        # filtered_d = [d for d in PRIORITY_DIRECTIONS if d is not opposite]
-
-        # if not filtered_d:
-        #     filtered_d.append(opposite)
-
-        # while queue:
-
-        #     cur_x, cur_y = queue.pop(0)
-        #     # if (cur_x, cur_y) == to_coor:
-        #     #     break
-        #     directions = filtered_d if (cur_x, cur_y) == from_coor else PRIORITY_DIRECTIONS
-        #     for d in directions:
-
-        #         n_x, n_y = cur_x+d.dx, cur_y+d.dy
-        #         if maze.is_wall(n_x, n_y) or (n_x, n_y) in visited:
-        #             continue
-
-        #         tracker[(n_x, n_y)] = (cur_x, cur_y)
-
-        #         queue.append((n_x, n_y))
-        #         visited.add((n_x, n_y))
-
-        # print("start->", from_coor, "target->", to_coor, file=f); print(True if to_coor in tracker else False, maze.is_wall(*to_coor), test, file=f)
-        # path = []
-        # cur_coor = to_coor
-
-        # while cur_coor != from_coor:
-        #     path.append(cur_coor)
-        #     cur_coor = tracker[cur_coor]
-
-        # path.reverse()
-
-        # n_coor = path.pop(0)
-
-        # for d in PRIORITY_DIRECTIONS:
-        #     if (d.dx+from_coor[0], d.dy+from_coor[1]) == n_coor:
-        #         return d
-        # return Direction.NONE
-        from collections import deque
-
-        to_coor = GhostStrategy.closer_corridor(to_coor, maze)
-
-        start = tuple(from_coor)
-        target = tuple(to_coor)
-
-        if start == target:
-            return Direction.NONE
-
-        def search(allow_opposite):
-            queue = deque([start])
-            visited = {start}
-            first_direction = {start: None}
+            tracker = {
+                from_coor: None
+            }
 
             while queue:
-                x, y = queue.popleft()
-                current = (x, y)
 
-                if current == target:
-                    return first_direction[current]
+                cur = queue.pop(0)
 
-                for direction in PRIORITY_DIRECTIONS:
-                    if (
-                        current == start
-                        and not allow_opposite
-                        and direction is opposite
-                    ):
+                if cur == target:
+                    break
+
+                for d in PRIORITY_DIRECTIONS:
+                    if with_opposite and opposite is d:
+                        continue
+                    with_opposite = False
+
+                    cur_x, cur_y = cur
+
+                    n = d.dx + cur_x, d.dy + cur_y
+
+                    if maze.is_wall(*n) or n in visited:
                         continue
 
-                    neighbor = (
-                        x + direction.dx,
-                        y + direction.dy,
-                    )
+                    queue.append(n)
+                    visited.add(n)
+                    tracker[n] = cur
 
-                    if maze.is_wall(*neighbor) or neighbor in visited:
-                        continue
+            return tracker if len(tracker) > 1 else None
 
-                    visited.add(neighbor)
+        tracker = search(True)
+        if not tracker:
+            tracker = search(False)
+        print(tracker if target not in tracker else "", file=f)
+        path = []
+        cur = target
+        while cur != from_coor:
+            path.append(cur)
+            cur = tracker[cur]
 
-                    if current == start:
-                        first_direction[neighbor] = direction
-                    else:
-                        first_direction[neighbor] = first_direction[current]
+        path.reverse()
 
-                    queue.append(neighbor)
-
-            return None
-
-        direction = search(allow_opposite=False)
-
-        if direction is None:
-            direction = search(allow_opposite=True)
-
-        return direction
+        print(test, from_coor, target, path, file=f)
+        for d in PRIORITY_DIRECTIONS:
+            if (d.dx+from_coor[0], d.dy+from_coor[1]) == path[0]:
+                return d
 
     @staticmethod
-    def _wander(ghost, maze):
-        cur_x, cur_y = ghost.tile
-        opposite = ghost.cur_direction.opposite()
+    def _wander(coor, opposite, maze):
+        cur_x, cur_y = coor
         valid_moves = [
             direction
             for direction in PRIORITY_DIRECTIONS
@@ -192,14 +139,14 @@ class BlinkyStrategy(GhostStrategy):
 
     def compute_next_move(self, blinky, pacman, maze, binky=None):
         match blinky.state:
-            case GhostState.CHASE:
+            case GhostState.CHASE if pacman.cur_direction is not Direction.NONE:
                 return self._chase(blinky, pacman, maze)
             case GhostState.FRIGHTENED:
                 return self._frighten(blinky, pacman, maze)
-            case GhostState.WANDER:
-                return self._wander(blinky, maze)
             case GhostState.DIED:
                 return self._go_to(blinky.tile, blinky.spawn, blinky.cur_direction.opposite(), maze)
+            case _:
+                return self._wander(blinky.tile, blinky.cur_direction.opposite(), maze)
 
 
 class PinkyStrategy(GhostStrategy):
@@ -211,14 +158,14 @@ class PinkyStrategy(GhostStrategy):
 
     def compute_next_move(self, pinky, pacman, maze, binky=None):
         match pinky.state:
-            case GhostState.CHASE:
+            case GhostState.CHASE if pacman.cur_direction is not Direction.NONE:
                 return self._chase(pinky, pacman, maze)
             case GhostState.FRIGHTENED:
                 return self._frighten(pinky, pacman, maze)
-            case GhostState.WANDER:
-                return self._wander(pinky, maze)
             case GhostState.DIED:
                 return self._go_to(pinky.tile, pinky.spawn, pinky.cur_direction.opposite(), maze)
+            case _:
+                return self._wander(pinky.tile, pinky.cur_direction.opposite(), maze)
 
 
 class InkyStrategy(GhostStrategy):
@@ -237,14 +184,14 @@ class InkyStrategy(GhostStrategy):
 
     def compute_next_move(self, inky, pacman, maze, blinky=None):
         match inky.state:
-            case GhostState.CHASE:
+            case GhostState.CHASE if pacman.cur_direction is not Direction.NONE:
                 return self._chase(inky, pacman, maze, blinky)
             case GhostState.FRIGHTENED:
                 return self._frighten(inky, pacman, maze)
-            case GhostState.WANDER:
-                return self._wander(inky, maze)
             case GhostState.DIED:
                 return self._go_to(inky.tile, inky.spawn, inky.cur_direction.opposite(), maze)
+            case _:
+                return self._wander(inky.tile, inky.cur_direction.opposite(), maze)
 
 
 class ClydeStrategy(GhostStrategy):
@@ -253,10 +200,10 @@ class ClydeStrategy(GhostStrategy):
 
         dist = math.dist(clyde.tile, pacman.tile)
 
-        if dist > 8:
+        if dist > 8 and pacman.cur_direction is not Direction.NONE:
             return self._go_to(clyde.tile, pacman.tile, clyde.cur_direction.opposite(), maze, "clyde")
         else:
-            return self._wander(clyde, maze)
+            return self._wander(clyde.tile, clyde.cur_direction.opposite(), maze)
 
     def compute_next_move(self, clyde, pacman, maze, blinky=None):
         match clyde.state:
