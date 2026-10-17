@@ -3,6 +3,7 @@ from . import ghost_ai
 from . import consumables
 from enum import Enum, auto
 
+f = open("logs.txt", "w")
 
 class EngineState(Enum):
     PLAYING = auto()
@@ -143,6 +144,7 @@ class GameEngine:
         self._respawn_timer = 3.0
         self._is_level_loaded = True
         self._skip_level = False
+        self.activate_cheat(Cheat.INVINCIBILITY)
 
     def _check_collisions(self):
         if self.is_game_over or self.is_game_won or self.is_level_completed:
@@ -163,6 +165,7 @@ class GameEngine:
                     self._pacman.lose_life()
                     if self._pacman.is_alive:
                         self._respawn()
+                        break
 
             if not self._pacman.is_alive:
                 self._is_game_over = True
@@ -189,7 +192,7 @@ class GameEngine:
 
     @property
     def is_level_completed(self):
-        return not consumables.Consumable.still_any_consumables or self._skip_level
+        return not consumables.Consumable.still_any_consumables() or self._skip_level
 
     def trigger_frightened_mode(self, duration):
         for ghost in self._ghosts:

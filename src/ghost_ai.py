@@ -3,7 +3,7 @@ from .entities import GhostState, PRIORITY_DIRECTIONS, Direction
 import random
 import math
 
-f = open("logs.txt", "w")
+# f = open("logs.txt", "w")
 
 
 class GhostStrategy(ABC):
@@ -61,9 +61,8 @@ class GhostStrategy(ABC):
                     break
 
                 for d in PRIORITY_DIRECTIONS:
-                    if with_opposite and opposite is d:
+                    if cur == from_coor and with_opposite and opposite is d:
                         continue
-                    with_opposite = False
 
                     cur_x, cur_y = cur
 
@@ -81,19 +80,27 @@ class GhostStrategy(ABC):
         tracker = search(True)
         if not tracker:
             tracker = search(False)
-        print(tracker if target not in tracker else "", file=f)
+        # print(tracker if target not in tracker else "", file=f)
+        if not tracker or target not in tracker:                                                                                                                                                                  
+                return GhostStrategy._wander(from_coor, opposite, maze)
         path = []
         cur = target
         while cur != from_coor:
             path.append(cur)
             cur = tracker[cur]
 
+        if not path:                                                                                                                                                                                              
+            return GhostStrategy._wander(from_coor, opposite, maze)  
+
         path.reverse()
 
-        print(test, from_coor, target, path, file=f)
+        # print(test, from_coor, target, path, file=f)
         for d in PRIORITY_DIRECTIONS:
             if (d.dx+from_coor[0], d.dy+from_coor[1]) == path[0]:
                 return d
+
+        return GhostStrategy._wander(from_coor, opposite, maze)
+
 
     @staticmethod
     def _wander(coor, opposite, maze):
@@ -125,6 +132,9 @@ class GhostStrategy(ABC):
 
             valid_moves.append((dist, direction))
 
+        if not valid_moves:
+            return ghost.cur_direction.opposite()
+
         return max(valid_moves, key=lambda move: move[0])[1]
 
     @abstractmethod
@@ -135,7 +145,7 @@ class GhostStrategy(ABC):
 class BlinkyStrategy(GhostStrategy):
 
     def _chase(self, blinky, pacman, maze):
-        return self._go_to(blinky.tile, pacman.tile, blinky.cur_direction.opposite(), maze, "blinky")
+        return self._go_to(blinky.tile, pacman.tile, blinky.cur_direction.opposite(), maze)
 
     def compute_next_move(self, blinky, pacman, maze, binky=None):
         match blinky.state:
@@ -153,8 +163,8 @@ class PinkyStrategy(GhostStrategy):
 
     def _chase(self, pinky, pacman, maze):
         pacman_x, pacman_y = pacman.tile
-        target_x, target_y = (pacman_x+4*pacman.cur_direction.dx, pacman_y+4*pacman.cur_direction.dy)
-        return self._go_to(pinky.tile, (target_x, target_y), pinky.cur_direction.opposite(), maze, "pinky")
+        target = (pacman_x + 4 * pacman.cur_direction.dx, pacman_y + 4 * pacman.cur_direction.dy)
+        return self._go_to(pinky.tile, target, pinky.cur_direction.opposite(), maze)
 
     def compute_next_move(self, pinky, pacman, maze, binky=None):
         match pinky.state:
@@ -178,9 +188,12 @@ class InkyStrategy(GhostStrategy):
 
         vector_x, vector_y = (p_prime_x-blinky_x, p_prime_y-blinky_y)
 
-        target_x, target_y = (vector_x*2+blinky_x, vector_y*2+blinky_y)
+        target = (vector_x*2+blinky_x, vector_y*2+blinky_y)
 
-        return self._go_to(inky.tile, (target_x, target_y), inky.cur_direction.opposite(), maze, "inky")
+        if target == inky.tile:
+            return self._wander(inky.tile, inky.cur_direction.opposite(), maze)
+
+        return self._go_to(inky.tile, target, inky.cur_direction.opposite(), maze)
 
     def compute_next_move(self, inky, pacman, maze, blinky=None):
         match inky.state:
@@ -201,9 +214,8 @@ class ClydeStrategy(GhostStrategy):
         dist = math.dist(clyde.tile, pacman.tile)
 
         if dist > 8 and pacman.cur_direction is not Direction.NONE:
-            return self._go_to(clyde.tile, pacman.tile, clyde.cur_direction.opposite(), maze, "clyde")
-        else:
-            return self._wander(clyde.tile, clyde.cur_direction.opposite(), maze)
+            return self._go_to(clyde.tile, pacman.tile, clyde.cur_direction.opposite(), maze)
+        return self._wander(clyde.tile, clyde.cur_direction.opposite(), maze)
 
     def compute_next_move(self, clyde, pacman, maze, blinky=None):
         match clyde.state:

@@ -32,20 +32,20 @@ class Consumable(ABC):
         self._effects = effects
         Consumable._counter += 1
 
-    @property
-    def still_any_consumables(self):
-        return not Consumable._counter
+    @classmethod
+    def still_any_consumables(cls):
+        return cls._counter > 0
 
     @classmethod
     def reset_counter(cls):
         cls._counter = 0
 
     def effect(self, engine):
-        for effect in self._effects:
-            effect.apply(engine)
-            if Consumable._counter > 0:
+        if Consumable.still_any_consumables() > 0:
                 Consumable._counter -= 1
 
+        for effect in self._effects:
+            effect.apply(engine)
 
 class PacGum(Consumable):
     pass

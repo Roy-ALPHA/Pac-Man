@@ -216,7 +216,7 @@ class Ghost(Entity):
                     self.switch_state(GhostState.WANDER)
             case GhostState.DIED if self.tile == (self._spawn_x, self._spawn_y):
                 self.switch_state(GhostState.WANDER)
-            case GhostState.WANDER if dist <= 2000:
+            case GhostState.WANDER if dist <= 10:
                 self.switch_state(GhostState.CHASE)
             case GhostState.CHASE if dist > 10:
                 self.switch_state(GhostState.WANDER)
