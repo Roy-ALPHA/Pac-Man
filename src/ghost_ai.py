@@ -81,8 +81,10 @@ class GhostStrategy(ABC):
         if not tracker:
             tracker = search(False)
         # print(tracker if target not in tracker else "", file=f)
+
         if not tracker or target not in tracker:                                                                                                                                                                  
-                return GhostStrategy._wander(from_coor, opposite, maze)
+            return GhostStrategy._wander(from_coor, opposite, maze)
+
         path = []
         cur = target
         while cur != from_coor:
@@ -100,7 +102,6 @@ class GhostStrategy(ABC):
                 return d
 
         return GhostStrategy._wander(from_coor, opposite, maze)
-
 
     @staticmethod
     def _wander(coor, opposite, maze):
@@ -149,13 +150,13 @@ class BlinkyStrategy(GhostStrategy):
 
     def compute_next_move(self, blinky, pacman, maze, binky=None):
         match blinky.state:
-            case GhostState.CHASE if pacman.cur_direction is not Direction.NONE:
+            case GhostState.CHASE:
                 return self._chase(blinky, pacman, maze)
             case GhostState.FRIGHTENED:
                 return self._frighten(blinky, pacman, maze)
             case GhostState.DIED:
                 return self._go_to(blinky.tile, blinky.spawn, blinky.cur_direction.opposite(), maze)
-            case _:
+            case GhostState.WANDER:
                 return self._wander(blinky.tile, blinky.cur_direction.opposite(), maze)
 
 
@@ -163,18 +164,20 @@ class PinkyStrategy(GhostStrategy):
 
     def _chase(self, pinky, pacman, maze):
         pacman_x, pacman_y = pacman.tile
-        target = (pacman_x + 4 * pacman.cur_direction.dx, pacman_y + 4 * pacman.cur_direction.dy)
+        target = pacman.tile
+        if pacman.cur_direction is not Direction.NONE:
+            target = (pacman_x + 4 * pacman.cur_direction.dx, pacman_y + 4 * pacman.cur_direction.dy)
         return self._go_to(pinky.tile, target, pinky.cur_direction.opposite(), maze)
 
     def compute_next_move(self, pinky, pacman, maze, binky=None):
         match pinky.state:
-            case GhostState.CHASE if pacman.cur_direction is not Direction.NONE:
+            case GhostState.CHASE:
                 return self._chase(pinky, pacman, maze)
             case GhostState.FRIGHTENED:
                 return self._frighten(pinky, pacman, maze)
             case GhostState.DIED:
                 return self._go_to(pinky.tile, pinky.spawn, pinky.cur_direction.opposite(), maze)
-            case _:
+            case GhostState.WANDER:
                 return self._wander(pinky.tile, pinky.cur_direction.opposite(), maze)
 
 
@@ -183,27 +186,27 @@ class InkyStrategy(GhostStrategy):
     def _chase(self, inky, pacman, maze, blinky):
         blinky_x, blinky_y = blinky.tile
         pacman_x, pacman_y = pacman.tile
+        target = pacman.tile
 
-        p_prime_x, p_prime_y = (pacman_x+2*pacman.cur_direction.dx, pacman_y+2*pacman.cur_direction.dy)
+        if pacman.cur_direction is not Direction.NONE:
+            p_prime_x, p_prime_y = (pacman_x+2*pacman.cur_direction.dx, pacman_y+2*pacman.cur_direction.dy)
+            vector_x, vector_y = (p_prime_x-blinky_x, p_prime_y-blinky_y)
+            target = (vector_x*2+blinky_x, vector_y*2+blinky_y)
 
-        vector_x, vector_y = (p_prime_x-blinky_x, p_prime_y-blinky_y)
-
-        target = (vector_x*2+blinky_x, vector_y*2+blinky_y)
-
-        if target == inky.tile:
+        if target != pacman.tile and target == inky.tile:
             return self._wander(inky.tile, inky.cur_direction.opposite(), maze)
 
         return self._go_to(inky.tile, target, inky.cur_direction.opposite(), maze)
 
     def compute_next_move(self, inky, pacman, maze, blinky=None):
         match inky.state:
-            case GhostState.CHASE if pacman.cur_direction is not Direction.NONE:
+            case GhostState.CHASE:
                 return self._chase(inky, pacman, maze, blinky)
             case GhostState.FRIGHTENED:
                 return self._frighten(inky, pacman, maze)
             case GhostState.DIED:
                 return self._go_to(inky.tile, inky.spawn, inky.cur_direction.opposite(), maze)
-            case _:
+            case GhostState.WANDER:
                 return self._wander(inky.tile, inky.cur_direction.opposite(), maze)
 
 
@@ -212,10 +215,15 @@ class ClydeStrategy(GhostStrategy):
     def _decide(self, clyde, pacman, maze):
 
         dist = math.dist(clyde.tile, pacman.tile)
+        target = clyde.spawn
 
-        if dist > 8 and pacman.cur_direction is not Direction.NONE:
-            return self._go_to(clyde.tile, pacman.tile, clyde.cur_direction.opposite(), maze)
-        return self._wander(clyde.tile, clyde.cur_direction.opposite(), maze)
+        if dist > 8:
+            target = pacman.tile
+
+        if clyde.tile == clyde.spawn:
+            return self._wander(clyde.tile, clyde.cur_direction.opposite(), maze)
+
+        return self._go_to(clyde.tile, target, clyde.cur_direction.opposite(), maze)
 
     def compute_next_move(self, clyde, pacman, maze, blinky=None):
         match clyde.state:
