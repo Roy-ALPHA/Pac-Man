@@ -1,12 +1,17 @@
 from ui.screen import Screen
 from ui.renderer import Renderer
 from ui.inputhandler import InputCommand
+from config import Config
+from maze_adapter import MazeAdapter
 
 
 class PlayScreen(Screen):
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, config: Config) -> None:
+
+        config = config
+        level = config.generate_level(20)
+        self.maze = MazeAdapter().generate_maze(level)
 
     def handle_input(self, command: InputCommand) -> None:
         pass
@@ -18,6 +23,7 @@ class PlayScreen(Screen):
 
     def render(self, render: Renderer) -> None:
         render.clear()
+        render.render_maze(self.maze, True)
         self.open_door(render)
 
     def open_door(self, render: Renderer) -> None:

@@ -2,19 +2,20 @@ from game_state_manager import GameStateManager
 from ui.inputhandler import InputHandler
 from ui.renderer import Renderer
 from ui.screen import Screen
+from config import Config
 import pygame
 
 
 class PacmanApp:
 
-    def __init__(self, w: int, h: int) -> None:
+    def __init__(self, config, w: int, h: int) -> None:
 
         self.is_running: bool = True
         self.renderer = Renderer(w, h)
         Screen.screen_w = w
         Screen.screen_h = h
         self.input_handler = InputHandler()
-        self.state_manager = GameStateManager()
+        self.state_manager = GameStateManager(config)
 
     def run(self) -> None:
 
@@ -43,5 +44,7 @@ class PacmanApp:
 
 
 if __name__ == "__main__":
-    test = PacmanApp(1200, 800)
+
+    config = Config()
+    test = PacmanApp(config, 1200, 800)
     test.run()

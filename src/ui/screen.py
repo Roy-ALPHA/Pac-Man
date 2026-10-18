@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from .inputhandler import InputCommand
 from .renderer import Renderer
+import pygame
 
 
 class Screen(ABC):
@@ -17,6 +18,10 @@ class Screen(ABC):
     @property
     def middle_h(self) -> int:
         return self.screen_h // 2
+
+    @staticmethod
+    def _load_img(path: str) -> pygame.Surface:
+        return pygame.image.load(f"assets/{path}")
 
     @abstractmethod
     def handle_input(self, command: InputCommand) -> None:

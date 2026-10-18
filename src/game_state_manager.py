@@ -7,11 +7,11 @@ from playscreen import PlayScreen
 
 class GameStateManager:
 
-    def __init__(self) -> None:
+    def __init__(self, config) -> None:
 
         self._active_screen: Screen | None = None
         self._screens: dict[str, Screen] = {}
-        self._create_screens()
+        self._create_screens(config)
 
     def handle_input(self, command: InputCommand) -> None:
         self._active_screen.handle_input(command)
@@ -26,7 +26,7 @@ class GameStateManager:
     def render(self, render: Renderer) -> None:
         self._active_screen.render(render)
 
-    def _create_screens(self) -> None:
+    def _create_screens(self, config) -> None:
 
         self._screens['main_menu'] = MainMenuScreen()
-        self._screens['play'] = PlayScreen()
+        self._screens['play'] = PlayScreen(config)

@@ -51,21 +51,18 @@ class MainMenuScreen(Screen):
         render.draw_door(0, Screen.door_w)
         render.draw_door(Screen.screen_w - Screen.door_w, Screen.door_w)
 
-    @staticmethod
-    def _load_img(name: str) -> pygame.Surface:
-        return pygame.image.load(f"assets/{name}")
-
     def _get_images(self) -> None:
 
         img_names = ['logo.png', 'play.png', 'high.png',
                      'instruction.png', 'quit.png']
 
         for key, name in zip(self._keys, img_names):
-            self._imgs[key] = self._load_img(name)
 
-        for key, name in zip(self._keys[1:], img_names[1:]):
-            hover_name = name.replace('.png', '_hover.png')
-            self._hover_imgs[key] = self._load_img(hover_name)
+            if key != 'logo':
+                hover_name = name.replace('.png', '_hover.png')
+                self._hover_imgs[key] = self._load_img(f"main_mn/{hover_name}")
+
+            self._imgs[key] = self._load_img(f"main_mn/{name}")
 
     def _calculate_pos(self) -> None:
 
@@ -84,10 +81,9 @@ class MainMenuScreen(Screen):
                 self.middle_h + offset_y)
 
     def _is_hover(self, key: str) -> bool:
-        
         mouse_coord = pygame.mouse.get_pos()
-    
-        return key != 'logo' and self._button_rects[key].collidepoint(mouse_coord)
+        return (key != 'logo' and
+                self._button_rects[key].collidepoint(mouse_coord))
 
     def _draw_ui(self, render: Renderer) -> None:
 
