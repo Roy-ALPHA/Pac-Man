@@ -80,9 +80,8 @@ class GhostStrategy(ABC):
         tracker = search(True)
         if not tracker:
             tracker = search(False)
-        # print(tracker if target not in tracker else "", file=f)
 
-        if not tracker or target not in tracker:                                                                                                                                                                  
+        if not tracker or target not in tracker:
             return GhostStrategy._wander(from_coor, opposite, maze)
 
         path = []
@@ -91,12 +90,11 @@ class GhostStrategy(ABC):
             path.append(cur)
             cur = tracker[cur]
 
-        if not path:                                                                                                                                                                                              
-            return GhostStrategy._wander(from_coor, opposite, maze)  
+        if not path:
+            return GhostStrategy._wander(from_coor, opposite, maze)
 
         path.reverse()
 
-        # print(test, from_coor, target, path, file=f)
         for d in PRIORITY_DIRECTIONS:
             if (d.dx+from_coor[0], d.dy+from_coor[1]) == path[0]:
                 return d
@@ -120,23 +118,43 @@ class GhostStrategy(ABC):
     @staticmethod
     def _frighten(ghost, pacman, maze):
         ghost_x, ghost_y = ghost.tile
-
-        valid_moves = []
+        candidates = []
 
         for direction in PRIORITY_DIRECTIONS:
+            next_x = ghost_x + direction.dx
+            next_y = ghost_y + direction.dy
 
-            next_x, next_y = (direction.dx + ghost_x, direction.dy + ghost_y)
             if maze.is_wall(next_x, next_y):
                 continue
 
-            dist = math.dist((next_x, next_y), pacman.tile)
+            if direction is ghost.cur_direction.opposite():
+                continue
 
-            valid_moves.append((dist, direction))
+            distance = math.dist((next_x, next_y), pacman.tile)
 
-        if not valid_moves:
+            exits = 0
+            for next_direction in PRIORITY_DIRECTIONS:
+                x = next_x + next_direction.dx
+                y = next_y + next_direction.dy
+
+                if maze.is_wall(x, y):
+                    continue
+                if next_direction is direction.opposite():
+                    continue
+
+                exits += 1
+
+            candidates.append((distance, exits, direction))
+
+        safe_candidates = [c for c in candidates if c[1] > 0]
+
+        if safe_candidates:
+            candidates = safe_candidates
+
+        if not candidates:
             return ghost.cur_direction.opposite()
 
-        return max(valid_moves, key=lambda move: move[0])[1]
+        return max(candidates, key=lambda move: (move[0], move[1]))[2]
 
     @abstractmethod
     def compute_next_move(self, ghost, pacman, maze, binky=None):

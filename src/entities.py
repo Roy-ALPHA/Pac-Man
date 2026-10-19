@@ -185,6 +185,7 @@ class Ghost(Entity):
         self._strategy = strategy
         self._pacman = pacman
         self._blinky = blinky
+        self._target_tile = None
 
     @property
     def is_frighten(self):
@@ -201,9 +202,12 @@ class Ghost(Entity):
         self._state = GhostState.WANDER
 
     def _request_direction(self, blinky=None):
-        self._next_direction = self._strategy.compute_next_move(
-            self, self._pacman, self._grid, blinky
-        )
+        if self._next_direction is Direction.NONE or self._target_tile is None or self._target_tile == self.tile:
+            self._next_direction = self._strategy.compute_next_move(
+                self, self._pacman, self._grid, blinky
+            )
+            gx, gy = self.tile
+            self._target_tile = self._next_direction.dx+gx, self._next_direction.dy+gy
 
     def switch_state(self, new_state):
         self._state = new_state
@@ -215,9 +219,6 @@ class Ghost(Entity):
         if self.state not in {GhostState.DIED, GhostState.FRIGHTENED}:
             self.switch_state(GhostState.FRIGHTENED)
             self._frightened_time = duration
-
-    def in_center(self, tolerance=0.02):
-        return abs((self._x % 1) - 0.5) < tolerance and abs((self._y % 1) - 0.5) < tolerance
 
     def update(self, dt):
         distance = self._speed * dt
@@ -241,7 +242,6 @@ class Ghost(Entity):
         if self._pacman.is_invincible and self._state not in {GhostState.WANDER, GhostState.FRIGHTENED}:
             self.switch_state(GhostState.WANDER)
 
-        # if self.in_center():
         self._request_direction(self._blinky)
 
         self._calc_movement(distance)
