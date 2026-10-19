@@ -33,7 +33,7 @@ class Cell:
 
     @property
     def is_wall(self):
-        return self.cell_type is CellType.WALL
+        return self.cell_type in (CellType.WALL, CellType.LOGO)
 
     def remove_consumables(self):
         self.consumes = []
@@ -145,6 +145,16 @@ class MazeAdapter:
                     extended_maze[cy + 1][cx].cell_type = CellType.CORRIDOR
                 if not bool(val & 8):  # true if the west is not wall
                     extended_maze[cy][cx - 1].cell_type = CellType.CORRIDOR
+
+        for y in range(raw_h):
+            for x in range(raw_w):
+                if bitmask_maze[y][x] != 15:
+                    continue
+                cx, cy = 2 * x + 1, 2 * y + 1
+                if x + 1 < raw_w and bitmask_maze[y][x + 1] == 15:
+                    extended_maze[cy][cx + 1].cell_type = CellType.LOGO
+                if y + 1 < raw_h and bitmask_maze[y + 1][x] == 15:
+                    extended_maze[cy + 1][cx].cell_type = CellType.LOGO
 
         return extended_maze
 

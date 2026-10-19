@@ -73,6 +73,7 @@ class Renderer:
 
         self._get_tile_size(maze)
         t = self._tile
+        self._masks = {}
 
         for key, img in self._wall_imgs.items():
             self._wall_imgs_resized[key] = pygame.transform.scale(
@@ -94,7 +95,6 @@ class Renderer:
 
         t = self._tile
         animation_time = pygame.time.get_ticks() * self.anm_fps // 1000
-        print(animation_time)
 
         for (x, y), (mask, kind) in self._masks.items():
             frame = (animation_time + (x + y if self.wave else 0)) % self.frame
