@@ -96,7 +96,6 @@ class Renderer:
         t = self._tile
         animation_time = pygame.time.get_ticks() * self.anm_fps // 1000
         print(animation_time)
-        
 
         for (x, y), (mask, kind) in self._masks.items():
             frame = (animation_time + (x + y if self.wave else 0)) % self.frame
