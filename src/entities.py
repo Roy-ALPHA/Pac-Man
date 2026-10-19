@@ -71,10 +71,9 @@ class Entity(ABC):
     def increase_speed(self):
         self._speed += 2
 
+    @abstractmethod
     def respawn(self):
-        self._x, self._y = self._spawn_x, self._spawn_y
-        self._cur_direction = Direction.NONE
-        self._next_direction = Direction.NONE
+        pass
 
     def can_move(self, direction):
         if direction is Direction.NONE:
@@ -142,8 +141,17 @@ class PacMan(Entity):
         return self._lives > 0
 
     @property
+    def lives(self):
+        return self._lives
+
+    @property
     def is_invincible(self):
         return self._invincible
+
+    def respawn(self):
+        self._x, self._y = self._spawn_x, self._spawn_y
+        self._cur_direction = Direction.NONE
+        self._next_direction = Direction.NONE
 
     def can_eat_ghost(self, ghost):
         return ghost == self and ghost.is_frighten
@@ -173,7 +181,7 @@ class PacMan(Entity):
 class Ghost(Entity):
     def __init__(self, spawn_x, spawn_y, speed, grid, strategy, pacman, name, blinky=None):
         super().__init__(spawn_x, spawn_y, speed, grid, name)
-        self._state = GhostState.DIED
+        self._state = GhostState.WANDER
         self._strategy = strategy
         self._pacman = pacman
         self._blinky = blinky
@@ -185,6 +193,12 @@ class Ghost(Entity):
     @property
     def state(self):
         return self._state
+
+    def respawn(self):
+        self._x, self._y = self._spawn_x, self._spawn_y
+        self._cur_direction = Direction.NONE
+        self._next_direction = Direction.NONE
+        self._state = GhostState.WANDER
 
     def _request_direction(self, blinky=None):
         self._next_direction = self._strategy.compute_next_move(
@@ -198,8 +212,9 @@ class Ghost(Entity):
         return self._pacman == self and not self._pacman.is_invincible and self.state in {GhostState.WANDER, GhostState.CHASE}
 
     def active_frighten_mode(self, duration):
-        self.switch_state(GhostState.FRIGHTENED)
-        self._frightened_time = duration
+        if self.state not in {GhostState.DIED, GhostState.FRIGHTENED}:
+            self.switch_state(GhostState.FRIGHTENED)
+            self._frightened_time = duration
 
     def in_center(self, tolerance=0.02):
         return abs((self._x % 1) - 0.5) < tolerance and abs((self._y % 1) - 0.5) < tolerance

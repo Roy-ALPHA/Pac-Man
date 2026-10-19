@@ -2,6 +2,7 @@ from . import entities
 from . import ghost_ai
 from . import consumables
 from enum import Enum, auto
+from .maze_adapter import MazeAdapter
 
 f = open("logs.txt", "w")
 
@@ -23,9 +24,9 @@ class Cheat(Enum):
 
 class GameEngine:
 
-    def __init__(self, config, maze_adapter):
+    def __init__(self, config):
         self._config = config
-        self._maze_adapter = maze_adapter
+        self._maze_adapter = MazeAdapter()
         self._score = 0
         self._cur_level = 1
         self._state = EngineState.RESPAWNING
@@ -54,10 +55,14 @@ class GameEngine:
         return self._score
 
     def stop(self):
+        self._prev_state = self._state
         self._state = EngineState.STOPPED
 
     def resume(self):
-        self._state = EngineState.PLAYING
+        try:
+            self._state = self._prev_state
+        except AttributeError:
+            pass  # no effect
 
     def activate_cheat(self, cheat: Cheat):
         match cheat:
@@ -87,13 +92,23 @@ class GameEngine:
         }
         center = (self._grid.width // 2, self._grid.height // 2)
 
-        self._pacman = entities.PacMan(
-            *center,
-            self._config.pacman_speed,
-            self._grid,
-            self._config.lives,
-            "pacman"
-        )
+        try:
+            self._pacman = entities.PacMan(
+                *center,
+                self._config.pacman_speed,
+                self._grid,
+                self._pacman.lives,
+                "pacman"
+            )
+        except AttributeError:
+            self._pacman = entities.PacMan(
+                *center,
+                self._config.pacman_speed,
+                self._grid,
+                self._config.lives,
+                "pacman"
+            )
+
         pinky = entities.Ghost(
             *corners["top_left"],
             self._levelconfig.ghost_speed,
@@ -111,7 +126,7 @@ class GameEngine:
             "Blinky"
         )
         inky = entities.Ghost(
-            *corners["bottom_left"],
+            *corners["bottom_right"],
             self._levelconfig.ghost_speed,
             self._grid,
             ghost_ai.InkyStrategy(),
@@ -120,7 +135,7 @@ class GameEngine:
             blinky
         )
         clyde = entities.Ghost(
-            *corners["bottom_right"],
+            *corners["bottom_left"],
             self._levelconfig.ghost_speed,
             self._grid,
             ghost_ai.ClydeStrategy(),
@@ -144,7 +159,6 @@ class GameEngine:
         self._respawn_timer = 3.0
         self._is_level_loaded = True
         self._skip_level = False
-        self.activate_cheat(Cheat.INVINCIBILITY)
 
     def _check_collisions(self):
         if self.is_game_over or self.is_game_won or self.is_level_completed:

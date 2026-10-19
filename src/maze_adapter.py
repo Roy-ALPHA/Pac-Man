@@ -42,7 +42,6 @@ class Cell:
         self.consumes.append(consumable)
 
 
-
 @dataclass(slots=True)
 class MazeGrid:
     width: int

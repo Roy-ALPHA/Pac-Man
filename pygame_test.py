@@ -66,7 +66,6 @@ class PygameTestHarness:
         self.clock = pygame.time.Clock()
         self.config_path = Path(config_path)
         self.config = Config.from_file(self.config_path)
-        self.adapter = MazeAdapter()
 
         # Load fonts
         self.font_title = pygame.font.Font(None, 28)
@@ -109,7 +108,7 @@ class PygameTestHarness:
 
     def reset_engine(self) -> None:
         """Instantiate a fresh GameEngine instance."""
-        self.engine = GameEngine(self.config, self.adapter)
+        self.engine = GameEngine(self.config)
         # Advance 1 short tick so _load_level initializes entities immediately
         self.engine.tick(0.001, Direction.NONE)
         self.current_dir = Direction.NONE
