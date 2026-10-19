@@ -4,12 +4,6 @@ from enum import Enum
 import pygame
 
 
-NEIGHBOURS = (
-    (1, 0, -1), (2, 1, -1), (4, 1, 0), (8, 1, 1),
-    (16, 0, 1), (32, -1, 1), (64, -1, 0), (128, -1, -1),
-)
-
-
 class Styles(Enum):
 
     BLUE = 'maze/blue_wl.png'
@@ -59,8 +53,10 @@ class Renderer:
 
     def _wall_mask(self, maze, cell):
         mask = 0
+        neighbors = ((1, 0, -1), (2, 1, -1), (4, 1, 0), (8, 1, 1), (16, 0, 1),
+                      (32, -1, 1), (64, -1, 0), (128, -1, -1),)
 
-        for bit, dx, dy in NEIGHBOURS:
+        for bit, dx, dy in neighbors:
             x = cell.x + dx
             y = cell.y + dy
 
