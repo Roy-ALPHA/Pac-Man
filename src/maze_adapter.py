@@ -1,16 +1,17 @@
 from mazegenerator import MazeGenerator
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from .consumables import Consumable
+from consumables import Consumable
 import io
 from contextlib import redirect_stdout
 import warnings
-from .errors import MazeAdapterWarning
+from errors import MazeAdapterWarning
 
 
 class CellType(Enum):
     WALL = auto()
     CORRIDOR = auto()
+    LOGO = auto()
 
 
 @dataclass(slots=True)
@@ -129,6 +130,7 @@ class MazeAdapter:
                 val = bitmask_maze[y][x]
 
                 if val == 15:
+                    extended_maze[2 * y + 1][2 * x + 1].cell_type = CellType.LOGO
                     continue
 
                 cx, cy = 2 * x + 1, 2 * y + 1

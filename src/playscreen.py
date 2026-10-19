@@ -10,7 +10,7 @@ class PlayScreen(Screen):
     def __init__(self, config: Config) -> None:
 
         config = config
-        level = config.generate_level(20)
+        level = config.generate_level(1)
         self.maze = MazeAdapter().generate_maze(level)
 
     def handle_input(self, command: InputCommand) -> None:

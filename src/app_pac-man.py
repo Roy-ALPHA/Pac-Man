@@ -3,6 +3,7 @@ from ui.inputhandler import InputHandler
 from ui.renderer import Renderer
 from ui.screen import Screen
 from config import Config
+from pathlib import Path
 import pygame
 
 
@@ -45,6 +46,6 @@ class PacmanApp:
 
 if __name__ == "__main__":
 
-    config = Config()
+    config = Config().from_file(Path("../config.json"))
     test = PacmanApp(config, 1200, 800)
     test.run()

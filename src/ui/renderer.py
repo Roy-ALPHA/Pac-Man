@@ -4,7 +4,6 @@ from enum import Enum
 import pygame
 
 
-# bit value, dx, dy  (same order as walls_meta.json: N NE E SE S SW W NW)
 NEIGHBOURS = (
     (1, 0, -1), (2, 1, -1), (4, 1, 0), (8, 1, 1),
     (16, 0, 1), (32, -1, 1), (64, -1, 0), (128, -1, -1),

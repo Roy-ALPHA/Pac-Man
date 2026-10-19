@@ -5,7 +5,7 @@ from typing import Any
 from errors import PacmanConfigWarning
 from lark import Lark
 from warnings import warn
-from .maze_adapter import MazeAdapter
+from maze_adapter import MazeAdapter
 import random
 
 
