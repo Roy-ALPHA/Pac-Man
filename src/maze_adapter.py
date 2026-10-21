@@ -1,11 +1,11 @@
 from mazegenerator import MazeGenerator
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from consumables import Consumable
+from .consumables import Consumable
 import io
 from contextlib import redirect_stdout
 import warnings
-from errors import MazeAdapterWarning
+from .errors import MazeAdapterWarning
 
 
 class CellType(Enum):

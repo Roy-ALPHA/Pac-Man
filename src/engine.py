@@ -77,7 +77,7 @@ class GameEngine:
                 self._pacman.add_life()
             case Cheat.GHOST_FREEZE:
                 for ghost in self._ghosts:
-                    ghost.switch_state(entities.GhostState.FROZEN)
+                    ghost.freeze()
 
     def _load_level(self):
         consumables.Consumable.reset_counter()

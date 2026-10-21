@@ -191,6 +191,11 @@ class Ghost(Entity):
     def is_frighten(self):
         return self._state is GhostState.FRIGHTENED
 
+
+    @property
+    def is_frozen(self):
+        return self._speed == 0
+
     @property
     def state(self):
         return self._state
@@ -200,6 +205,8 @@ class Ghost(Entity):
         self._cur_direction = Direction.NONE
         self._next_direction = Direction.NONE
         self._state = GhostState.WANDER
+        if self.is_frozen:
+            self.freeze()
 
     def _request_direction(self, blinky=None):
         if self._next_direction is Direction.NONE or self._target_tile is None or self._target_tile == self.tile:
@@ -211,6 +218,14 @@ class Ghost(Entity):
 
     def switch_state(self, new_state):
         self._state = new_state
+
+    def freeze(self):
+        try:
+            self._speed = self._old_speed
+            del self._old_speed
+        except AttributeError:
+            self._old_speed = self._speed
+            self._speed = 0
 
     def can_eat_pacman(self):
         return self._pacman == self and not self._pacman.is_invincible and self.state in {GhostState.WANDER, GhostState.CHASE}
@@ -236,8 +251,8 @@ class Ghost(Entity):
                 self.switch_state(GhostState.CHASE)
             case GhostState.CHASE if dist > 10:
                 self.switch_state(GhostState.WANDER)
-            case GhostState.FROZEN:
-                return
+            # case GhostState.FROZEN:
+            #     return
 
         if self._pacman.is_invincible and self._state not in {GhostState.WANDER, GhostState.FRIGHTENED}:
             self.switch_state(GhostState.WANDER)
