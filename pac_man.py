@@ -1,112 +1,221 @@
-from src.errors import setup_warnings
-from pathlib import Path
-from src.config import Config
-from src.highscore import HighscoreManager
-from src.maze_adapter import MazeAdapter, CellType, MazeGrid
 
-setup_warnings()
+from rich.live import Live
+from rich.table import Table
+from rich.spinner import Spinner, SPINNERS
+from rich.text import Text
+from rich.console import Group, Console
+import time
+from colorama import Fore, Style
+
+import warnings
+
+from rich.pretty import pprint
+import threading
+import collections
+from enum import Enum, auto
+
+YELLOW = "\033[93m"
+RED = "\033[91m"
+CYAN = "\033[96m"
+BOLD = "\033[1m"
+RESET = "\033[0m"
 
 
-class TerminalRenderer:
-    # ANSI escape sequences
-    RESET = "\033[0m"
-    BOLD = "\033[1m"
-    DIM = "\033[2m"
+class LogType(Enum):
+    WARNING = auto()
+    LOG = auto()
 
-    # Foreground colors
-    BLUE = "\033[34m"
-    BRIGHT_BLUE = "\033[94m"
-    YELLOW = "\033[93m"
-    GREEN = "\033[92m"
-    RED = "\033[91m"
-    CYAN = "\033[96m"
-    PINK = "\033[95m"
-    WHITE = "\033[97m"
+    def ansi(self):
+        match self:
+            case LogType.LOG:
+                return f"{Fore.LIGHTGREEN_EX}{Style.BRIGHT}Log{Fore.RESET}"
+            case LogType.WARNING:
+                return f"{Fore.LIGHTRED_EX}{Style.BRIGHT}Warning{Fore.RESET}"
 
-    # Unicode symbols (double-width characters for square grid aspect ratio)
-    WALL_CHAR = "██"
-    PATH_CHAR = "  "
-    PELLET_CHAR = " ·"
-    SUPER_PELLET_CHAR = " ●"
-    ENTRY_CHAR = " E"
-    EXIT_CHAR = " X"
-    PLAYER_CHAR = " C"
-    GHOST_CHAR = " M"
+
+class WarningManager:
+    _spinners = 0
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._stop_event = threading.Event()
+        self._worker = threading.Thread(target=self._warn)
+        self._tables = dict()
+        WarningManager._gen_box(100)
 
     @classmethod
-    def render(
-        cls,
-        grid: MazeGrid,
-        player_pos: tuple[int, int] | None = None,
-        ghost_positions: list[tuple[int, int]] | None = None,
-    ) -> str:
-        lines: list[str] = []
-        ghost_set = set(ghost_positions or [])
+    def _gen_box(cls, width):
+        box_top = list("┌" + "▱" * width + "┐")
+        box_bottom = list("└" + "▱" * width + "┘")
 
-        # Top border coordinate ruler
-        ruler = "   " + "".join(f"{x % 10:2}" for x in range(grid.width))
-        lines.append(f"{cls.DIM}{ruler}{cls.RESET}")
+        top_frames = []
+        bottom_frames = []
 
-        for y in range(grid.height):
-            row_str = [f"{cls.DIM}{y:2} {cls.RESET}"]
+        for i in range(width):
 
-            for x in range(grid.width):
-                pos = (x, y)
-                cell = grid.get_cell(x, y)
+            box_top[i + 1] = "▰"
+            box_bottom[width - i] = "▰"
 
-                # 1. Dynamic Entities (Player & Ghosts)
-                if player_pos and pos == player_pos:
-                    row_str.append(
-                        f"{cls.YELLOW}{cls.BOLD}{cls.PLAYER_CHAR}{cls.RESET}"
-                    )
-                elif pos in ghost_set:
-                    row_str.append(
-                        f"{cls.RED}{cls.BOLD}{cls.GHOST_CHAR}{cls.RESET}"
-                    )
+            top_frames.append(Fore.LIGHTMAGENTA_EX + "".join(box_top) + RESET)
+            bottom_frames.append(Fore.LIGHTMAGENTA_EX + "".join(box_bottom) + RESET)
 
-                # 2. Level Entry & Exit points
-                elif hasattr(grid, "maze_entry") and pos == grid.maze_entry:
-                    row_str.append(
-                        f"{cls.GREEN}{cls.BOLD}{cls.ENTRY_CHAR}{cls.RESET}"
-                    )
-                elif hasattr(grid, "maze_exit") and pos == grid.maze_exit:
-                    row_str.append(
-                        f"{cls.CYAN}{cls.BOLD}{cls.EXIT_CHAR}{cls.RESET}"
-                    )
+        for i in range(width):
 
-                # 3. Walls
-                elif cell.cell_type == CellType.WALL:
-                    row_str.append(f"{cls.BLUE}{cls.WALL_CHAR}{cls.RESET}")
+            box_top[width - i] = "▱"
+            box_bottom[i + 1] = "▱"
 
-                # 5. Empty Open Corridor
-                else:
-                    row_str.append(cls.PATH_CHAR)
+            top_frames.append(Fore.LIGHTMAGENTA_EX + "".join(box_top) + RESET)
+            bottom_frames.append(Fore.LIGHTMAGENTA_EX + "".join(box_bottom) + RESET)
 
-            lines.append("".join(row_str))
+        SPINNERS["b_top"] = {
+            "interval": 50,
+            "frames": top_frames,
+        }
 
-        # Bottom Legend
-        legend = (
-            f"\n{cls.DIM}Legend:{cls.RESET} "
-            f"{cls.BLUE}██{cls.RESET} Wall  "
-            f"{cls.GREEN} E{cls.RESET} Entry  "
-            f"{cls.CYAN} X{cls.RESET} Exit  "
-            f"{cls.WHITE} ·{cls.RESET} Pellet  "
-            f"{cls.YELLOW} ●{cls.RESET} Energizer  "
-            f"{cls.YELLOW} C{cls.RESET} Player"
+        SPINNERS["b_bottom"] = {
+            "interval": 50,
+            "frames": bottom_frames,
+        }
+
+        cls._spinners += 2
+
+    @staticmethod
+    def _gen_titel_spinner(titel):
+        if titel not in SPINNERS:
+            width = 98
+            title = f"{Fore.LIGHTCYAN_EX}[{titel}]{Fore.RESET}"
+
+            if len(title) > width:
+                title = title[:width]
+
+            line = ["•" if i % 2 else " " for i in range(width)]
+
+            start = (width - len(title)) // 2
+            line[start:start + len(title)] = title
+
+            frames = []
+            pacman_frames = "Cc"
+            rotated_pacman = "Ɔɔ"
+
+            for i in range(width // 2):
+
+                if line[i] == "[":
+                    break
+
+                left = i
+                right = width - 1 - i
+
+                if left < start or left >= start + len(title):
+                    line[left] = pacman_frames[i % len(pacman_frames)]
+
+                if left > 0:
+                    line[left - 1] = " "
+
+                if right < start or right >= start + len(title):
+                    line[right] = rotated_pacman[i % len(rotated_pacman)]
+
+                if right < width - 1:
+                    line[right + 1] = " "
+
+                frames.append(Style.BRIGHT + "  " + "".join(line) + Style.RESET_ALL)
+
+            SPINNERS[titel] = {
+                "interval": 50,
+                "frames": frames,
+            }
+
+        return Spinner(titel, speed=0.5)
+
+    def stope(self):
+        self._stop_event.set()
+
+    def _warn(self):
+        with Live(self._get_spinners(), refresh_per_second=15, vertical_overflow="visible", transient=True) as animation:
+            while not self._stop_event.is_set():
+                animation.update(self._get_spinners())
+                self._stop_event.wait(0.05)
+
+    @classmethod
+    def _create_spinner(cls, frames):
+        spinner_name = f"spinner_{cls._spinners}"
+
+        SPINNERS[spinner_name] = {
+            "interval": 50,
+            "frames": frames
+        }
+
+        cls._spinners += 1
+
+        return spinner_name
+
+    @staticmethod
+    def _gen_line_spinner(msg, log_type):
+        arrows_frames = [
+            "▹▹▹▹▹",
+            "▸▹▹▹▹",
+            "▹▸▹▹▹",
+            "▹▹▸▹▹",
+            "▹▹▹▸▹",
+            "▹▹▹▹▸",
+        ]
+
+        frames = []
+        spaces = "      " if log_type is LogType.LOG else "  "
+
+        color = Fore.LIGHTGREEN_EX if log_type is LogType.LOG else Fore.LIGHTRED_EX
+
+        for i in range(len(msg)):
+
+            log = f"    {log_type.ansi()}{spaces}{Fore.LIGHTCYAN_EX}{arrows_frames[i % len(arrows_frames)]}{Fore.RESET}    "
+
+            char = msg[i].upper() if msg[i].isalpha() else msg[i]
+
+            animated_msg = (
+                Fore.YELLOW + msg[:i] + Fore.RESET + color + char + Style.RESET_ALL + msg[i+1:]
+            )
+
+            frames.append(log + animated_msg)
+
+        spinner_name = WarningManager._create_spinner(frames)
+
+        return Spinner(
+            spinner_name,
+            speed=0.5
         )
-        lines.append(legend)
 
-        return "\n".join(lines)
+    def log(self, msg, titel, log_type):
+        with self._lock:
+            if titel in self._tables:
+                self._tables[titel].pop()
+            else:
+                self._tables[titel] = [Spinner("b_top"), self._gen_titel_spinner(titel), ""]
 
-def main() -> None:
-    path = Path("config.json")
-    config = Config.from_file(path)
-    # highscoremanager = HighscoreManager(config.highscore_filename)
-    # highscoremanager.save("yssuiui", 909090)
-    # print(highscoremanager.get_top_scores())
-    mazegrid = MazeAdapter().generate_level_maze(config.generate_level(1))
-    print(mazegrid)
-    print(TerminalRenderer.render(mazegrid))
+            self._tables[titel].extend([self._gen_line_spinner(msg, log_type), "", Spinner("b_bottom")])
 
-if __name__ == "__main__":
-    main()
+    def _get_spinners(self):
+        with self._lock:
+            all_spinners = []
+            for spinners in self._tables.values():
+                all_spinners.extend(spinners)
+
+            return Group(*all_spinners)
+
+    def start(self):
+        self._worker.start()
+
+    def join(self):
+        self._worker.join()
+
+
+war = WarningManager()
+war.start()
+
+import random
+
+logs = [LogType.LOG, LogType.WARNING]
+
+first = True
+
+while True:
+    war.log("shfjshdfjhsdkjf", "ConfigLogs", random.choice(logs))
+    time.sleep(3)

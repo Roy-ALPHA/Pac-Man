@@ -6,6 +6,7 @@ from .maze_adapter import MazeAdapter
 
 f = open("logs.txt", "w")
 
+
 class EngineState(Enum):
     PLAYING = auto()
     RESPAWNING = auto()

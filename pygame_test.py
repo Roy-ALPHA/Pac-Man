@@ -16,7 +16,9 @@ from src.config import Config
 from src.maze_adapter import MazeAdapter
 from src.engine import GameEngine, EngineState, Cheat
 from src.entities import Direction, GhostState
+from src.errors import setup_warnings
 
+setup_warnings()
 
 # ==============================================================================
 # Theme & Color Definitions
@@ -307,7 +309,6 @@ class PygameTestHarness:
 
             is_frightened = ghost.state == GhostState.FRIGHTENED
             is_died = ghost.state == GhostState.DIED
-            is_frozen = ghost.state == GhostState.FROZEN
 
             # Determine body & eye styling
             if is_frightened:
@@ -318,9 +319,6 @@ class PygameTestHarness:
                 else:
                     body_color = COLOR_FRIGHTENED_BLUE
                     eye_pupil_color = (255, 255, 255)
-            elif is_frozen:
-                body_color = COLOR_FROZEN
-                eye_pupil_color = (0, 110, 210)
             else:
                 body_color = GHOST_COLORS.get(ghost.name, (255, 0, 0))
                 eye_pupil_color = (30, 40, 220)

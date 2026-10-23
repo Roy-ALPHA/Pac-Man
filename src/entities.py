@@ -8,7 +8,6 @@ class GhostState(Enum):
     FRIGHTENED = auto()
     WANDER = auto()
     DIED = auto()
-    FROZEN = auto()
 
 
 class Direction(Enum):
@@ -191,7 +190,6 @@ class Ghost(Entity):
     def is_frighten(self):
         return self._state is GhostState.FRIGHTENED
 
-
     @property
     def is_frozen(self):
         return self._speed == 0
@@ -251,8 +249,6 @@ class Ghost(Entity):
                 self.switch_state(GhostState.CHASE)
             case GhostState.CHASE if dist > 10:
                 self.switch_state(GhostState.WANDER)
-            # case GhostState.FROZEN:
-            #     return
 
         if self._pacman.is_invincible and self._state not in {GhostState.WANDER, GhostState.FRIGHTENED}:
             self.switch_state(GhostState.WANDER)
