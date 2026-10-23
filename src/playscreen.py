@@ -9,12 +9,15 @@ class PlayScreen(Screen):
 
     def __init__(self, config: Config) -> None:
 
-        config = config
+        self._prepare_maze = True
+        self._change_style = False
         level = config.generate_level(1)
         self.maze = MazeAdapter().generate_maze(level)
 
     def handle_input(self, command: InputCommand) -> None:
-        pass
+
+        if command.change_style:
+            self._change_style = True
 
     def update(self, dt: int) -> None:
 
@@ -22,8 +25,11 @@ class PlayScreen(Screen):
             Screen.door_w -= 1100 * (dt / 1000)
 
     def render(self, render: Renderer) -> None:
+
         render.clear()
-        render.render_maze(self.maze, True)
+        render.render_maze(self.maze, self._change_style, self._prepare_maze)
+        self._change_style = False
+        self._prepare_maze = False
         self.open_door(render)
 
     def open_door(self, render: Renderer) -> None:
