@@ -3,8 +3,11 @@ from . import ghost_ai
 from . import consumables
 from enum import Enum, auto
 from .maze_adapter import MazeAdapter
-
-f = open("logs.txt", "w")
+import os
+from pathlib import Path
+import sys
+import json
+from dataclasses import asdict
 
 
 class EngineState(Enum):
@@ -32,6 +35,7 @@ class GameEngine:
         self._cur_level = 1
         self._state = EngineState.RESPAWNING
         self._is_level_loaded = False
+        self._data_dir = self._get_save_path()
 
     @staticmethod
     def _calc_spawn(grid, def_spawn_coor):
@@ -222,6 +226,116 @@ class GameEngine:
         if self._level_time <= 0:
             self._is_game_over = True
             self._state = EngineState.GAME_OVER
+
+    def _save_states(self):
+        states = {
+            "engine": None,
+            "level": None,
+            "ghosts": None,
+            "pacman": None,
+            "maze": None
+        }
+
+        states["engine"] = {
+            "_cur_level": self._cur_level,
+            "_score": self._score,
+            "_state": {self._state.name: self._respawn_timer if self._state is EngineState.RESPAWNING else None}
+        }
+
+        states["level"] = {
+            "is_loaded": self._is_level_loaded,
+            "_level_time": self._level_time if self._is_level_loaded else None
+        }
+        if self._is_level_loaded:
+
+            for ghost in self._ghosts:
+                states["ghosts"].update({
+                    ghost.name: {
+                        "_spawn_x": ghost.spawn[0],
+                        "_spawn_y": ghost.spawn[1],
+                        "_x": ghost.x,
+                        "_y": ghost.y,
+                        "_speed": ghost.speed,
+                        "_cur_direction": ghost.cur_direction.name,
+                        "_next_direction": ghost.next_direction.name,
+                        "_state": ghost.state.name,
+                        "_target_tile": ghost.target_tile,
+                        "_frightened_time": ghost.frightened_duration
+                    }
+                })
+
+            states["pacman"] = {
+                "_spawn_x": self._pacman.spawn[0],
+                "_spawn_y": self._pacman.spawn[1],
+                "_x": self._pacman.x,
+                "_y": self._pacman.y,
+                "_speed": self._pacman.speed,
+                "_lives": self._pacman.lives,
+                "_cur_direction": self._pacman.cur_direction.name,
+                "_next_direction": self._pacman.next_direction.name,
+                "_invincibl": self._pacman.is_invincible
+            }
+
+            states["maze"] = []
+
+            for row in self._grid.grid:
+                for cell in row:
+                    if cell.is_wall:
+                        continue
+                    if not cell.consumes:
+                        states["maze"].append((cell.x, cell.y))
+
+        config_file = self._data_dir / "config.json"
+
+        states_file = self._data_dir / "pacman_states.json"
+
+        with open(str(config_file), "w") as cf, open(str(states_file), "w") as sf:
+            json.dump(asdict(self._config), cf, indent=2)
+            json.dump(states, sf, indent=2)
+
+    def _load_states(self):
+
+        config_file = self._data_dir / "config.json"
+
+        states_file = self._data_dir / "pacman_states.json"
+
+        with open(str(config_file), "w") as cf, open(str(states_file), "w") as sf:
+            global_states = json.load(sf)
+            config = json.load(cf)
+
+        pass
+
+    @staticmethod
+    def _get_save_path(app_name: str = "pacman") -> Path:
+        if sys.platform == "win32":
+            # 1. Windows: %LOCALAPPDATA% or %APPDATA%
+            base_dir = os.getenv("LOCALAPPDATA") or os.getenv("APPDATA")
+            if base_dir:
+                data_dir = Path(base_dir) / app_name
+            else:
+                data_dir = Path.home() / "AppData" / "Local" / app_name
+
+        elif sys.platform == "darwin":
+            # 2. macOS: ~/Library/Application Support/<app_name>
+            data_dir = Path.home() / "Library" / "Application Support" / app_name
+
+        else:
+            # 3. Linux & POSIX (XDG Base Directory Spec)
+            xdg_data = os.getenv("XDG_DATA_HOME")
+            if xdg_data:
+                data_dir = Path(xdg_data) / app_name
+            else:
+                home = os.getenv("HOME")
+                base = (
+                    Path(home) / ".local" / "share"
+                    if home
+                    else Path.home() / ".local" / "share"
+                )
+            data_dir = base / app_name
+
+        # Create directories if they don't exist yet
+        data_dir.mkdir(parents=True, exist_ok=True)
+        return data_dir
 
     def tick(self, dt, pacman_direction):
         match self._state:

@@ -1,24 +1,10 @@
 
 from rich.live import Live
-from rich.table import Table
 from rich.spinner import Spinner, SPINNERS
-from rich.text import Text
-from rich.console import Group, Console
-import time
+from rich.console import Group
 from colorama import Fore, Style
-
-import warnings
-
-from rich.pretty import pprint
-import threading
-import collections
 from enum import Enum, auto
-
-YELLOW = "\033[93m"
-RED = "\033[91m"
-CYAN = "\033[96m"
-BOLD = "\033[1m"
-RESET = "\033[0m"
+import threading
 
 
 class LogType(Enum):
@@ -32,6 +18,13 @@ class LogType(Enum):
             case LogType.WARNING:
                 return f"{Fore.LIGHTRED_EX}{Style.BRIGHT}Warning{Fore.RESET}"
 
+    def text(self):
+        match self:
+            case LogType.LOG:
+                return "Log"
+            case LogType.WARNING:
+                return "Warning"
+
 
 class WarningManager:
     _spinners = 0
@@ -41,6 +34,7 @@ class WarningManager:
         self._stop_event = threading.Event()
         self._worker = threading.Thread(target=self._warn)
         self._tables = dict()
+        self._logs_file = open("logs.txt", "w")
         WarningManager._gen_box(100)
 
     @classmethod
@@ -56,16 +50,16 @@ class WarningManager:
             box_top[i + 1] = "▰"
             box_bottom[width - i] = "▰"
 
-            top_frames.append(Fore.LIGHTMAGENTA_EX + "".join(box_top) + RESET)
-            bottom_frames.append(Fore.LIGHTMAGENTA_EX + "".join(box_bottom) + RESET)
+            top_frames.append(Fore.LIGHTMAGENTA_EX + "".join(box_top) + Fore.RESET)
+            bottom_frames.append(Fore.LIGHTMAGENTA_EX + "".join(box_bottom) + Fore.RESET)
 
         for i in range(width):
 
             box_top[width - i] = "▱"
             box_bottom[i + 1] = "▱"
 
-            top_frames.append(Fore.LIGHTMAGENTA_EX + "".join(box_top) + RESET)
-            bottom_frames.append(Fore.LIGHTMAGENTA_EX + "".join(box_bottom) + RESET)
+            top_frames.append(Fore.LIGHTMAGENTA_EX + "".join(box_top) + Fore.RESET)
+            bottom_frames.append(Fore.LIGHTMAGENTA_EX + "".join(box_bottom) + Fore.RESET)
 
         SPINNERS["b_top"] = {
             "interval": 50,
@@ -106,13 +100,13 @@ class WarningManager:
                 right = width - 1 - i
 
                 if left < start or left >= start + len(title):
-                    line[left] = pacman_frames[i % len(pacman_frames)]
+                    line[left] = Fore.LIGHTYELLOW_EX + pacman_frames[i % len(pacman_frames)] + Fore.RESET
 
                 if left > 0:
                     line[left - 1] = " "
 
                 if right < start or right >= start + len(title):
-                    line[right] = rotated_pacman[i % len(rotated_pacman)]
+                    line[right] = Fore.LIGHTYELLOW_EX + rotated_pacman[i % len(rotated_pacman)] + Fore.RESET
 
                 if right < width - 1:
                     line[right + 1] = " "
@@ -127,6 +121,7 @@ class WarningManager:
         return Spinner(titel, speed=0.5)
 
     def stope(self):
+        self._logs_file.close()
         self._stop_event.set()
 
     def _warn(self):
@@ -183,14 +178,27 @@ class WarningManager:
             speed=0.5
         )
 
+    def _save_log(self, msg, title, log_type):
+        arrows = "▸▸▸▸▸"
+        log = f"[{title}]{log_type.text()}   {arrows}   {msg}"
+        print(log, file=self._logs_file)
+        self._logs_file.flush()
+
     def log(self, msg, titel, log_type):
+        self._save_log(msg, titel, log_type)
         with self._lock:
+            poped_box = None
             if titel in self._tables:
-                self._tables[titel].pop()
+                poped_box = self._tables[titel].pop()
             else:
                 self._tables[titel] = [Spinner("b_top"), self._gen_titel_spinner(titel), ""]
 
-            self._tables[titel].extend([self._gen_line_spinner(msg, log_type), "", Spinner("b_bottom")])
+            spinners_counter = len(self._tables[titel]) - 1
+
+            if spinners_counter // 2 >= 10:
+                self._tables[titel] = [Spinner("b_top"), self._gen_titel_spinner(titel), ""]
+
+            self._tables[titel].extend([self._gen_line_spinner(msg, log_type), "", poped_box if poped_box else Spinner("b_bottom")])
 
     def _get_spinners(self):
         with self._lock:
@@ -205,17 +213,3 @@ class WarningManager:
 
     def join(self):
         self._worker.join()
-
-
-war = WarningManager()
-war.start()
-
-import random
-
-logs = [LogType.LOG, LogType.WARNING]
-
-first = True
-
-while True:
-    war.log("shfjshdfjhsdkjf", "ConfigLogs", random.choice(logs))
-    time.sleep(3)

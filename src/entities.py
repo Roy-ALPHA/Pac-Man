@@ -60,6 +60,22 @@ class Entity(ABC):
         return self._cur_direction
 
     @property
+    def next_direction(self):
+        return self._next_direction
+
+    @property
+    def speed(self):
+        return self._speed
+
+    @property
+    def x(self):
+        return self._x
+
+    @property
+    def y(self):
+        return self._y
+
+    @property
     def tile(self):
         return (round(self._x), round(self._y))
 
@@ -197,6 +213,14 @@ class Ghost(Entity):
     @property
     def state(self):
         return self._state
+
+    @property
+    def target_tile(self):
+        return self._target_tile
+
+    @property
+    def frightened_duration(self):
+        return self._frightened_time if self.is_frighten else None
 
     def respawn(self):
         self._x, self._y = self._spawn_x, self._spawn_y
