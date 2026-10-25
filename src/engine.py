@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 import json
 from dataclasses import asdict
+from .config import Config
 
 
 class EngineState(Enum):
@@ -230,7 +231,6 @@ class GameEngine:
     def _save_states(self):
         states = {
             "engine": None,
-            "level": None,
             "ghosts": None,
             "pacman": None,
             "maze": None
@@ -239,13 +239,11 @@ class GameEngine:
         states["engine"] = {
             "_cur_level": self._cur_level,
             "_score": self._score,
-            "_state": {self._state.name: self._respawn_timer if self._state is EngineState.RESPAWNING else None}
-        }
-
-        states["level"] = {
-            "is_loaded": self._is_level_loaded,
+            "_state": {self._state.name: self._respawn_timer if self._state is EngineState.RESPAWNING else None},
+            "is_level_loaded": self._is_level_loaded,
             "_level_time": self._level_time if self._is_level_loaded else None
         }
+
         if self._is_level_loaded:
 
             for ghost in self._ghosts:
@@ -299,11 +297,32 @@ class GameEngine:
 
         states_file = self._data_dir / "pacman_states.json"
 
-        with open(str(config_file), "w") as cf, open(str(states_file), "w") as sf:
+        with open(str(states_file), "w") as sf:
             global_states = json.load(sf)
-            config = json.load(cf)
 
-        pass
+        self._config = Config.from_file(config_file)
+
+        for key, value in global_states["engine"].items():
+            if key == "_state":
+                continue
+            setattr(self, key, value)
+
+        state, value = list(global_states["engine"]["_state"].items())[0]
+
+        self._state = EngineState(state)
+
+        if self._state is EngineState.RESPAWNING:
+            self._respawn_timer = value
+
+        if self._state is EngineState.STOPPED:
+            self._state = EngineState.PLAYING
+
+        self.stop()
+
+        if global_states["engine"]["is_level_loaded"]:
+            pass
+
+        
 
     @staticmethod
     def _get_save_path(app_name: str = "pacman") -> Path:
