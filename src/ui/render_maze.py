@@ -8,6 +8,9 @@ class Styles(Enum):
     BLUE = 'maze/blue_wl.png'
     ORNG = 'maze/orng_wl.png'
     ROSE = 'maze/rose_wl.png'
+    RED = 'maze/red_walls.png'
+    PURPL = 'maze/purple_walls.png'
+    GREEN = 'maze/green_walls.png'
 
 
 class RenderMaze:
@@ -26,8 +29,9 @@ class RenderMaze:
         self._off_x: int = 0
         self._off_y: int = 0
 
-        self._walls_names: list[str] = ['rose', 'blue']
-        self._wall_index: int = 0
+        self._walls_names: list[str] = ['blue', 'orng', 'rose', 'red', 'purpl', 'green']
+        self._wall_index: int = 1
+        self._curr_style_name = self._walls_names[0]
         self._loaded_images: dict[str, pygame.Surface] = {}
         self._curr_style: dict[str, pygame.Surface] = {}
         self._resized_walls: dict[str, pygame.Surface] = {}
@@ -89,19 +93,16 @@ class RenderMaze:
         t = self._tile
         frame = self._frame
 
-        self._loaded_images = {
-            "blue": self._load(Styles.BLUE),
-            "rose": self._load(Styles.ROSE),
-            "orng": self._load(Styles.ORNG)
-        }
+        for key, path in zip(self._walls_names, Styles):
 
-        for key, img in self._loaded_images.items():
+            self._loaded_images[key] = self._load(path)
+            img = self._loaded_images[key]
             self._resized_walls[key] = pygame.transform.scale(
                 img, (16 * t, 16 * t * frame)
             )
-
         self._curr_style['logo'] = self._resized_walls['orng']
-        self._curr_style['wall'] = self._resized_walls['blue']
+        self._walls_names.remove('orng')
+        self._curr_style['wall'] = self._resized_walls[self._curr_style_name]
 
     def prepare(self, maze) -> None:
 

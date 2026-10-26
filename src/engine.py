@@ -1,14 +1,14 @@
-from . import entities
-from . import ghost_ai
-from . import consumables
+import entities
+import ghost_ai
+import consumables
 from enum import Enum, auto
-from .maze_adapter import MazeAdapter
+from maze_adapter import MazeAdapter
 import os
 from pathlib import Path
 import sys
 import json
 from dataclasses import asdict
-from .config import Config
+from config import Config
 
 
 class EngineState(Enum):

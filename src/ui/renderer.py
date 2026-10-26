@@ -2,6 +2,7 @@ from typing import Any
 import pygame
 from .render_maze import RenderMaze
 from .render_consumables import RenderConsumables
+from .render_player import RenderPlayer
 
 
 class Renderer:
@@ -18,22 +19,24 @@ class Renderer:
 
         self._maze_renderer: RenderMaze = RenderMaze(
             self._screen, width, height)
-        self._first_maze = True
         self._consumables_renderer: RenderConsumables = RenderConsumables(
             self._screen)
+        self._player_renderer: RenderPlayer = RenderPlayer(self._screen)
+        self._first_maze = True
 
     def render_maze(self, maze, change_style: bool) -> None:
 
         if self._first_maze:
             self._first_maze = False
             self._maze_renderer.prepare(maze)
-            self._consumables_renderer.prepare(self._maze_renderer, maze)
-    
+            self._consumables_renderer.prepare(self._maze_renderer)
+            self._player_renderer.prepare(self._maze_renderer)
+
         self._maze_renderer.render(change_style)
         self._consumables_renderer.render(maze, change_style)
 
     def render_entities(self, player, ghosts) -> None:
-        pass
+        self._player_renderer.render(player)
 
     def render_hub(self, score: int, lives: int, level: int,
                    time_left: float) -> None:
