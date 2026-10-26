@@ -42,10 +42,11 @@ class Consumable(ABC):
 
     def effect(self, engine):
         if Consumable.still_any_consumables() > 0:
-                Consumable._counter -= 1
+            Consumable._counter -= 1
 
         for effect in self._effects:
             effect.apply(engine)
+
 
 class PacGum(Consumable):
     pass

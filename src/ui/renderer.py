@@ -1,11 +1,12 @@
 from typing import Any
 import pygame
-from .maze_render import RenderMaze
+from .render_maze import RenderMaze
+from .render_consumables import RenderConsumables
 
 
 class Renderer:
 
-    """Manager class it owns the window and delegates drawing"""
+    """Manager class owns the window and delegates drawing to other classes"""
 
     def __init__(self, width: int, height: int):
 
@@ -17,10 +18,19 @@ class Renderer:
 
         self._maze_renderer: RenderMaze = RenderMaze(
             self._screen, width, height)
+        self._first_maze = True
+        self._consumables_renderer: RenderConsumables = RenderConsumables(
+            self._screen)
 
-    def render_maze(self, maze, change_style: bool,
-                    first_maze: bool = False) -> None:
-        self._maze_renderer.render(maze, change_style, first_maze)
+    def render_maze(self, maze, change_style: bool) -> None:
+
+        if self._first_maze:
+            self._first_maze = False
+            self._maze_renderer.prepare(maze)
+            self._consumables_renderer.prepare(self._maze_renderer, maze)
+    
+        self._maze_renderer.render(change_style)
+        self._consumables_renderer.render(maze, change_style)
 
     def render_entities(self, player, ghosts) -> None:
         pass

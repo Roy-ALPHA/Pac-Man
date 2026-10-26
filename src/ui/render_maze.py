@@ -1,7 +1,5 @@
 from enum import Enum
-
 import pygame
-
 from maze_adapter import CellType
 
 
@@ -34,6 +32,18 @@ class RenderMaze:
         self._curr_style: dict[str, pygame.Surface] = {}
         self._resized_walls: dict[str, pygame.Surface] = {}
         self._masks: dict[tuple[int, int], tuple[int, str]] = {}
+
+    @property
+    def tile(self) -> int:
+        return self._tile
+
+    @property
+    def off_x(self) -> int:
+        return self._off_x
+
+    @property
+    def off_y(self) -> int:
+        return self._off_y
 
     @staticmethod
     def _same_wall_type(maze, x: int, y: int, cell_type) -> bool:
@@ -70,6 +80,7 @@ class RenderMaze:
             if self._same_wall_type(maze, x, y, cell.cell_type):
                 mask += neighbor_value
 
+
         return mask
 
     def _prepare_styles(self, maze) -> None:
@@ -80,8 +91,8 @@ class RenderMaze:
 
         self._loaded_images = {
             "blue": self._load(Styles.BLUE),
-            "orng": self._load(Styles.ORNG),
-            "rose": self._load(Styles.ROSE)
+            "rose": self._load(Styles.ROSE),
+            "orng": self._load(Styles.ORNG)
         }
 
         for key, img in self._loaded_images.items():
@@ -92,7 +103,7 @@ class RenderMaze:
         self._curr_style['logo'] = self._resized_walls['orng']
         self._curr_style['wall'] = self._resized_walls['blue']
 
-    def _prepare(self, maze) -> None:
+    def prepare(self, maze) -> None:
 
         self._prepare_styles(maze)
         self._masks.clear()
@@ -104,11 +115,11 @@ class RenderMaze:
                     self._masks[(cell.x, cell.y)] = (
                         self._get_cell_mask(maze, cell), wall_type)
 
-    def _change_style(self) -> None:
+    def change_style(self) -> None:
 
         i = self._wall_index
-        names = self._walls_names
-        self._curr_style['wall'] = self._resized_walls[names[i % len(names)]]
+        name = self._walls_names[i % len(self._walls_names)]
+        self._curr_style['wall'] = self._resized_walls[name]
         self._wall_index += 1
 
     def _draw_walls(self) -> None:
@@ -124,13 +135,9 @@ class RenderMaze:
                               (self._off_x + x * t, self._off_y + y * t),
                               area)
 
-    def render(self, maze, change_style: bool,
-               first_maze: bool = False) -> None:
-
-        if first_maze:
-            self._prepare(maze)
+    def render(self, change_style: bool) -> None:
 
         if change_style:
-            self._change_style()
+            self.change_style()
 
         self._draw_walls()

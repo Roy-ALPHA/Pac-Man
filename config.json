@@ -7,8 +7,8 @@
     "points_per_super_pacgum": 50,
     "points_per_ghost": 200,
     "ghost_speed": 8.0,
-    "pacman_speed": 15,
+    "pacman_speed": 5,
+    "highscore_filename": "config.json",
     "seed": -42,
     "level_max_time": 90
-    // "highscore_filename": "highscores.json"
 }

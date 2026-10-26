@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
-from .entities import GhostState, PRIORITY_DIRECTIONS, Direction
+from entities import GhostState, PRIORITY_DIRECTIONS, Direction
 import random
 import math
-
-# f = open("logs.txt", "w")
 
 
 class GhostStrategy(ABC):
