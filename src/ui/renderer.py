@@ -3,6 +3,7 @@ import pygame
 from .render_maze import RenderMaze
 from .render_consumables import RenderConsumables
 from .render_player import RenderPlayer
+from .render_ghost import RenderGhost
 
 
 class Renderer:
@@ -22,6 +23,7 @@ class Renderer:
         self._consumables_renderer: RenderConsumables = RenderConsumables(
             self._screen)
         self._player_renderer: RenderPlayer = RenderPlayer(self._screen)
+        self._ghost_renderer: RenderGhost = RenderGhost(self._screen)
         self._first_maze = True
 
     def render_maze(self, maze, change_style: bool) -> None:
@@ -31,12 +33,14 @@ class Renderer:
             self._maze_renderer.prepare(maze)
             self._consumables_renderer.prepare(self._maze_renderer)
             self._player_renderer.prepare(self._maze_renderer)
+            self._ghost_renderer.prepare(self._maze_renderer)
 
         self._maze_renderer.render(change_style)
         self._consumables_renderer.render(maze, change_style)
 
     def render_entities(self, player, ghosts) -> None:
         self._player_renderer.render(player)
+        self._ghost_renderer.render(ghosts)
 
     def render_hub(self, score: int, lives: int, level: int,
                    time_left: float) -> None:

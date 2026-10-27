@@ -8,11 +8,6 @@ from engine import GameEngine
 
 
 class PlayEngine(GameEngine):
-    """GameEngine plus what the screen needs, without editing engine.py.
-
-    - read-only views of the engine state for the renderer
-    - Pac-Man spawns on a corridor cell instead of inside the logo walls
-    """
 
     def _load_level(self):
         super()._load_level()
@@ -42,6 +37,12 @@ class PlayScreen(Screen):
         self._direction = Direction.NONE
         self._engine = PlayEngine(config)
 
+    @staticmethod
+    def open_door(render: Renderer) -> None:
+
+        render.draw_door(0, Screen.door_w)
+        render.draw_door(Screen.screen_w - Screen.door_w, Screen.door_w)
+
     def handle_input(self, command: InputCommand) -> None:
 
         if command.change_style:
@@ -67,8 +68,3 @@ class PlayScreen(Screen):
 
         self._change_style = False
         self.open_door(render)
-
-    def open_door(self, render: Renderer) -> None:
-
-        render.draw_door(0, Screen.door_w)
-        render.draw_door(Screen.screen_w - Screen.door_w, Screen.door_w)

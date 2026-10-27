@@ -1,4 +1,3 @@
-import math
 import pygame
 
 
@@ -73,32 +72,41 @@ class RenderPlayer:
         self._last_x, self._last_y = self._x, self._y
 
     def _update_draw_position(self, player) -> None:
-        """Melt the gap when free, slide to the tile centre when blocked."""
-        d = player.cur_direction
-        self._dir = (d.dx, d.dy)
-        blocked = self._dir in self._rows and not player.can_move(d)
+        direction = player.cur_direction
+        self._dir = (direction.dx, direction.dy)
+
+        blocked = (
+            self._dir in self._rows
+            and not player.can_move(direction)
+        )
 
         if blocked:
-            cx, cy = player.tile
-            to_x = cx - self._x - self._gap_x
-            to_y = cy - self._y - self._gap_y
-            dist = math.hypot(to_x, to_y)
+            tile_x, tile_y = player.tile
+
+            target_x = tile_x - self._x
+            target_y = tile_y - self._y
+
+            dx = target_x - self._gap_x
+            dy = target_y - self._gap_y
+
             step = player._speed * self._dt
-            if dist <= step:
-                self._gap_x, self._gap_y = cx - self._x, cy - self._y
+
+            if abs(dx) + abs(dy) <= step:
+                self._gap_x = target_x
+                self._gap_y = target_y
+                self._at_wall = True
             else:
-                self._gap_x += to_x / dist * step
-                self._gap_y += to_y / dist * step
-            self._at_wall = dist <= step + 1e-3
+                self._gap_x += dx * 0.2
+                self._gap_y += dy * 0.2
+                self._at_wall = False
         else:
-            decay = math.exp(-self._dt / self._smooth_s)
-            self._gap_x *= decay
-            self._gap_y *= decay
+            self._gap_x *= 0.8
+            self._gap_y *= 0.8
             self._at_wall = False
 
         self._draw_x = self._x + self._gap_x
         self._draw_y = self._y + self._gap_y
-
+    
     def _update_animation(self) -> None:
         if self._dir in self._rows:
             self._row = self._rows[self._dir]
