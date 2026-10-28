@@ -85,9 +85,11 @@ class GameEngine:
                 for ghost in self._ghosts:
                     ghost.freeze()
 
-    def _load_level(self):
+    def _load_level(self, seed=None):
         consumables.Consumable.reset_counter()
         levelconfig = self._config.generate_level(self._cur_level)
+        if seed is not None:
+            levelconfig.seed = seed
         self._grid = self._maze_adapter.generate_maze(levelconfig)
         self._levelconfig = levelconfig
         corners = {
@@ -171,7 +173,7 @@ class GameEngine:
             return
 
         pacman_x, pacman_y = self._pacman.tile
-        cell = self._grid.grid[pacman_y][pacman_x]
+        cell = self._grid.get_cell(pacman_x, pacman_y)
         for consumable in cell.consumes:
             consumable.effect(self)
         cell.remove_consumables()
@@ -233,7 +235,8 @@ class GameEngine:
             "engine": None,
             "ghosts": None,
             "pacman": None,
-            "maze": None
+            "maze": None,
+            "seed": None
         }
 
         states["engine"] = {
@@ -271,7 +274,7 @@ class GameEngine:
                 "_lives": self._pacman.lives,
                 "_cur_direction": self._pacman.cur_direction.name,
                 "_next_direction": self._pacman.next_direction.name,
-                "_invincibl": self._pacman.is_invincible
+                "_invincible": self._pacman.is_invincible
             }
 
             states["maze"] = []
@@ -282,6 +285,8 @@ class GameEngine:
                         continue
                     if not cell.consumes:
                         states["maze"].append((cell.x, cell.y))
+
+            states["seed"] = self._levelconfig.seed
 
         config_file = self._data_dir / "config.json"
 
@@ -300,10 +305,25 @@ class GameEngine:
         with open(str(states_file), "w") as sf:
             global_states = json.load(sf)
 
+        self._cur_level = global_states["engine"]["_cur_level"]
+
+        if not global_states["engine"]["_cur_level"]["is_level_loaded"]:
+            state, value = list(global_states["engine"]["_state"].items())[0]
+            
+            state = EngineState(state)
+
+            if state is EngineState.RESPAWNING:
+                self._respawn_timer = value
+
+            self._state = EngineState.RESPAWNING
+            return
+
+
         self._config = Config.from_file(config_file)
+        self._load_level(global_states["seed"])
 
         for key, value in global_states["engine"].items():
-            if key == "_state":
+            if key in {"_state", "_cur_level"}:
                 continue
             setattr(self, key, value)
 
@@ -319,10 +339,20 @@ class GameEngine:
 
         self.stop()
 
-        if global_states["engine"]["is_level_loaded"]:
-            pass
+        for ghost in self._ghosts:
+            for key, value in global_states["ghosts"][ghost.name].items():
+                if key == "_state":
+                    value = entities.GhostState(value)
+                setattr(ghost, key, value)
 
-        
+        for key, value in global_states["pacman"].items():
+            setattr(self._pacman, key, value)
+
+        for x, y in global_states["maze"]:
+            cell = self._grid.get_cell(x, y)
+            for consumable in cell.consumes:
+                consumable.effect(self)
+            cell.remove_consumables()
 
     @staticmethod
     def _get_save_path(app_name: str = "pacman") -> Path:
