@@ -24,11 +24,12 @@ class Renderer:
             self._screen)
         self._player_renderer: RenderPlayer = RenderPlayer(self._screen)
         self._ghost_renderer: RenderGhost = RenderGhost(self._screen)
-        self._first_maze = True
+        self._maze = None
 
     def render_maze(self, maze, change_style: bool) -> None:
 
-        if self._first_maze:
+        if self._maze is not maze:
+            self._maze = maze
             self._first_maze = False
             self._maze_renderer.prepare(maze)
             self._consumables_renderer.prepare(self._maze_renderer)
