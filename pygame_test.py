@@ -13,12 +13,13 @@ Provides a comprehensive GUI test bench with:
 - Hover inspector for tile coordinates & contents
 """
 
+import json
 import math
 import os
 from pathlib import Path
 import sys
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import pygame
 
@@ -27,9 +28,7 @@ from src.engine import GameEngine, EngineState, Cheat
 from src.entities import Direction, GhostState
 from src.consumables import Consumable, SuperPacGum, PacGum
 from src.highscore import HighscoreManager
-from src.errors import setup_warnings
-
-setup_warnings()
+from src.logs import warning_manager
 
 # ==============================================================================
 # Color Palette & Visual Theme
@@ -87,10 +86,16 @@ class PygameTestHarness:
         self.highscore_mgr = HighscoreManager(highscore_path)
 
         # Fonts
+        self.font_logo = pygame.font.Font(None, 62)
+        self.font_banner = pygame.font.Font(None, 44)
         self.font_title = pygame.font.Font(None, 24)
         self.font_main = pygame.font.Font(None, 20)
         self.font_small = pygame.font.Font(None, 16)
-        self.font_banner = pygame.font.Font(None, 44)
+
+        # Start Menu State
+        self.in_start_menu = True
+        self.menu_index = 0
+        self.menu_button_rects: List[pygame.Rect] = []
 
         # Engine reference
         self.engine: GameEngine = None  # type: ignore
@@ -154,6 +159,48 @@ class PygameTestHarness:
 
     def handle_input(self) -> None:
         """Process keyboard & mouse inputs for full engine feature testing."""
+        if self.in_start_menu:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.is_running = False
+                    return
+
+                elif event.type == pygame.MOUSEMOTION:
+                    for idx, rect in enumerate(self.menu_button_rects):
+                        if rect.collidepoint(event.pos):
+                            self.menu_index = idx
+
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    for idx, rect in enumerate(self.menu_button_rects):
+                        if rect.collidepoint(event.pos):
+                            self.menu_index = idx
+                            self.select_menu_option()
+                            return
+
+                elif event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_ESCAPE, pygame.K_q):
+                        if self.show_highscores_modal:
+                            self.show_highscores_modal = False
+                        else:
+                            self.is_running = False
+                        return
+
+                    elif event.key in (pygame.K_UP, pygame.K_w):
+                        self.menu_index = (self.menu_index - 1) % 2
+
+                    elif event.key in (pygame.K_DOWN, pygame.K_s):
+                        self.menu_index = (self.menu_index + 1) % 2
+
+                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_KP_ENTER):
+                        if self.show_highscores_modal:
+                            self.show_highscores_modal = False
+                        else:
+                            self.select_menu_option()
+
+                    elif event.key == pygame.K_h:
+                        self.show_highscores_modal = not self.show_highscores_modal
+            return
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.is_running = False
@@ -164,6 +211,12 @@ class PygameTestHarness:
                 if event.key in (pygame.K_ESCAPE, pygame.K_q):
                     self.is_running = False
                     return
+
+                # Return to Main Menu
+                elif event.key == pygame.K_m:
+                    self.in_start_menu = True
+                    self.engine.stop()
+                    self.set_toast("Main Menu (Simulation Paused)")
 
                 # 2. Movement Directions (WASD / Arrows)
                 if event.key in (pygame.K_UP, pygame.K_w):
@@ -308,28 +361,74 @@ class PygameTestHarness:
                 elif event.key == pygame.K_r:
                     self.reset_engine()
 
-    def test_save_state(self) -> None:
-        """Test engine._save_states() serialization to disk."""
+    def get_save_info(self) -> Optional[Dict[str, Any]]:
+        """Read summary metadata from pacman_states.json if present."""
+        save_file = getattr(self.engine, "_data_dir", Path.home() / ".local/share/pacman") / "pacman_states.json"
+        if not save_file.is_file():
+            return None
         try:
-            self.engine._save_states()
-            self.set_toast("Quick-Save Successful: State written to disk")
-        except Exception as err:
-            self.set_toast(f"Save Failed: {err}")
+            data = json.loads(save_file.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                return None
+            engine_info = data.get("engine", {})
+            return {
+                "level": engine_info.get("_cur_level", 1),
+                "score": engine_info.get("_score", 0),
+                "lives": data.get("pacman", {}).get("_lives", 3),
+                "path": str(save_file),
+            }
+        except Exception:
+            return None
 
-    def test_load_state(self) -> None:
+    def select_menu_option(self) -> None:
+        """Handle execution of selected start menu item."""
+        if self.menu_index == 0:
+            # NEW GAME
+            self.reset_engine()
+            self.in_start_menu = False
+            self.set_toast("New Game Started - Level 1")
+        elif self.menu_index == 1:
+            # RESUME GAME
+            save_info = self.get_save_info()
+            if not save_info:
+                self.set_toast("No save file found! Please start a New Game.", 2.5)
+                return
+            success = self.test_load_state()
+            if success:
+                self.in_start_menu = False
+                self.set_toast(f"Game Resumed! Level {self.engine._cur_level} (Score: {self.engine.score:,})")
+            else:
+                self.set_toast("Failed to load save file!", 2.5)
+
+    def test_save_state(self) -> bool:
+        """Test engine._save_states() serialization to disk."""
+        ok = self.engine._save_states()
+        if ok:
+            self.set_toast("Quick-Save Successful: State written to disk")
+            return True
+        else:
+            self.set_toast("Quick-Save Failed: Could not write state file", 2.5)
+            return False
+
+    def test_load_state(self) -> bool:
         """Test engine._load_states() restoration from disk."""
-        try:
-            self.engine._load_states()
+        ok = self.engine._load_states()
+        if ok:
             self.grid = self.engine._grid
             self.total_pellets = sum(1 for row in self.grid.grid for cell in row if cell.consumes)
             self.set_toast("Quick-Load Successful: State restored from disk")
-        except Exception as err:
-            self.set_toast(f"Load Failed: {err}")
+            return True
+        else:
+            self.set_toast("Quick-Load Failed: Save file missing or invalid", 2.5)
+            return False
 
     def update(self, dt: float) -> None:
         """Advance game engine simulation."""
         if self.toast_timer > 0:
             self.toast_timer -= dt
+
+        if self.in_start_menu:
+            return
 
         # Single frame stepping while paused
         if self.step_one_frame:
@@ -711,6 +810,7 @@ class PygameTestHarness:
             ("[WASD / Arrows]", "Move Pac-Man", (255, 238, 0)),
             ("[Space / P]", "Pause / Resume", (160, 200, 255)),
             ("[.] (Period)", "Step 1 Frame (Pause mode)", (160, 200, 255)),
+            ("[M]", "Main Menu (New / Resume)", (255, 180, 80)),
             ("[ [ / ] ]", "Sim Speed (0.25x - 10x)", (255, 215, 0)),
             ("[1 / I]", "Cheat: Toggle Invincible", (255, 215, 0)),
             ("[2 / L]", "Cheat: Skip Level", (255, 215, 0)),
@@ -764,15 +864,15 @@ class PygameTestHarness:
         elif state == EngineState.STOPPED:
             banner_text = "PAUSED"
             banner_color = (160, 200, 255)
-            sub_text = "Press SPACE to Resume | [.] to Step 1 Frame"
+            sub_text = "Press SPACE to Resume | [.] Step 1 Frame | [M] Main Menu"
         elif state == EngineState.GAME_OVER:
             banner_text = "GAME OVER"
             banner_color = (255, 60, 60)
-            sub_text = f"Final Score: {self.engine.score} | Press [R] to Restart"
+            sub_text = f"Final Score: {self.engine.score:,} | [R] Restart | [M] Main Menu"
         elif state == EngineState.GAME_WON:
             banner_text = "VICTORY!"
             banner_color = (255, 215, 0)
-            sub_text = f"All Levels Completed! Score: {self.engine.score} | Press [R] to Restart"
+            sub_text = f"All Levels Completed! Score: {self.engine.score:,} | [R] Restart | [M] Main Menu"
 
         if banner_text:
             overlay = pygame.Surface((self.maze_width, self.maze_height), pygame.SRCALPHA)
@@ -829,6 +929,205 @@ class PygameTestHarness:
             pygame.draw.rect(self.screen, (70, 110, 220), bg_rect, width=1, border_radius=6)
             self.screen.blit(toast_surf, (tx + 12, ty + 6))
 
+    def render_menu_toast(self) -> None:
+        """Render notification toast on the start menu screen."""
+        if self.toast_timer > 0 and self.toast_message:
+            toast_surf = self.font_main.render(self.toast_message, True, (255, 255, 255))
+            tw = toast_surf.get_width() + 24
+            th = toast_surf.get_height() + 12
+            tx = (self.screen_width - tw) // 2
+            ty = self.screen_height - 60
+
+            bg_rect = pygame.Rect(tx, ty, tw, th)
+            pygame.draw.rect(self.screen, (24, 28, 44), bg_rect, border_radius=6)
+            pygame.draw.rect(self.screen, (70, 110, 220), bg_rect, width=1, border_radius=6)
+            self.screen.blit(toast_surf, (tx + 12, ty + 6))
+
+    def render_start_menu(self, time_now: float) -> None:
+        """Render stylish retro arcade start menu with New Game and Resume Game choices."""
+        w = self.screen_width
+        h = self.screen_height
+        cx = w // 2
+        cy = h // 2
+
+        # 1. Subtle background grid dots
+        for gx in range(40, w, 60):
+            for gy in range(40, h, 60):
+                pygame.draw.circle(self.screen, (22, 28, 44), (gx, gy), 1)
+
+        # 2. Main Title & Subtitle
+        title_y = cy - 220
+        title_shadow = self.font_logo.render("PAC-MAN", True, (100, 80, 0))
+        title_surf = self.font_logo.render("PAC-MAN", True, COLOR_PACMAN)
+        self.screen.blit(title_shadow, (cx - title_surf.get_width() // 2 + 3, title_y + 3))
+        self.screen.blit(title_surf, (cx - title_surf.get_width() // 2, title_y))
+
+        sub_surf = self.font_main.render("ENGINE TEST BENCH & SIMULATION HARNESS", True, (150, 180, 220))
+        self.screen.blit(sub_surf, (cx - sub_surf.get_width() // 2, title_y + 60))
+
+        # 3. Animated Character Parade (Pac-Man & Ghosts)
+        parade_y = title_y + 110
+        pac_r = 16
+        pac_x = cx - 140
+        mouth_angle = abs(math.sin(time_now * 10)) * 0.75
+        if mouth_angle < 0.08:
+            pygame.draw.circle(self.screen, COLOR_PACMAN, (int(pac_x), int(parade_y)), int(pac_r))
+        else:
+            start_a = mouth_angle / 2
+            end_a = 2 * math.pi - mouth_angle / 2
+            pts = [(pac_x, parade_y)]
+            for step in range(20):
+                a = start_a + (end_a - start_a) * (step / 19.0)
+                pts.append((pac_x + pac_r * math.cos(a), parade_y + pac_r * math.sin(a)))
+            pygame.draw.polygon(self.screen, COLOR_PACMAN, pts)
+
+        # Mini pellets ahead of Pac-Man
+        for dot_offset in (-90, -70, -50):
+            pygame.draw.circle(self.screen, COLOR_PELLET, (int(cx + dot_offset), int(parade_y)), 3)
+
+        # 4 ghosts in line
+        ghost_configs = [
+            ("Blinky", cx - 20, GHOST_COLORS["Blinky"]),
+            ("Pinky", cx + 35, GHOST_COLORS["Pinky"]),
+            ("Inky", cx + 90, GHOST_COLORS["Inky"]),
+            ("Clyde", cx + 145, GHOST_COLORS["Clyde"]),
+        ]
+        for name, gx, gcolor in ghost_configs:
+            gr = 14
+            pygame.draw.circle(self.screen, gcolor, (int(gx), int(parade_y - gr * 0.2)), int(gr))
+            pygame.draw.rect(
+                self.screen,
+                gcolor,
+                (int(gx - gr), int(parade_y - gr * 0.2), int(gr * 2), int(gr * 1.0)),
+            )
+            # Eyes looking left (toward Pac-Man)
+            pygame.draw.circle(self.screen, (255, 255, 255), (int(gx - 5), int(parade_y - 2)), 4)
+            pygame.draw.circle(self.screen, (255, 255, 255), (int(gx + 3), int(parade_y - 2)), 4)
+            pygame.draw.circle(self.screen, (30, 40, 220), (int(gx - 7), int(parade_y - 2)), 2)
+            pygame.draw.circle(self.screen, (30, 40, 220), (int(gx + 1), int(parade_y - 2)), 2)
+
+        # 4. Menu Buttons Container
+        btn_w = 480
+        btn_h = 68
+        btn_x = cx - btn_w // 2
+
+        btn0_y = cy + 10
+        btn1_y = cy + 92
+
+        btn0_rect = pygame.Rect(btn_x, btn0_y, btn_w, btn_h)
+        btn1_rect = pygame.Rect(btn_x, btn1_y, btn_w, btn_h)
+        self.menu_button_rects = [btn0_rect, btn1_rect]
+
+        save_info = self.get_save_info()
+        has_save = save_info is not None
+
+        # --- Button 0: NEW GAME ---
+        is_sel_0 = (self.menu_index == 0)
+        bg_col_0 = (28, 38, 64) if is_sel_0 else (18, 22, 34)
+        border_col_0 = COLOR_PACMAN if is_sel_0 else (45, 55, 80)
+        border_w_0 = 2 if is_sel_0 else 1
+
+        pygame.draw.rect(self.screen, bg_col_0, btn0_rect, border_radius=8)
+        pygame.draw.rect(self.screen, border_col_0, btn0_rect, width=border_w_0, border_radius=8)
+
+        if is_sel_0:
+            cursor_x = btn_x + 32
+            cursor_y = btn0_y + btn_h // 2
+            c_angle = abs(math.sin(time_now * 12)) * 0.8
+            if c_angle < 0.1:
+                pygame.draw.circle(self.screen, COLOR_PACMAN, (int(cursor_x), int(cursor_y)), 10)
+            else:
+                c_pts = [(cursor_x, cursor_y)]
+                for step in range(16):
+                    a = c_angle / 2 + (2 * math.pi - c_angle) * (step / 15.0)
+                    c_pts.append((cursor_x + 10 * math.cos(a), cursor_y + 10 * math.sin(a)))
+                pygame.draw.polygon(self.screen, COLOR_PACMAN, c_pts)
+
+        txt0_title = self.font_title.render("NEW GAME", True, (255, 255, 255) if is_sel_0 else (180, 190, 210))
+        txt0_desc = self.font_small.render("Start a fresh test session from Level 1", True, (255, 220, 100) if is_sel_0 else (130, 140, 160))
+        self.screen.blit(txt0_title, (btn_x + 58, btn0_y + 14))
+        self.screen.blit(txt0_desc, (btn_x + 58, btn0_y + 39))
+
+        # --- Button 1: RESUME GAME ---
+        is_sel_1 = (self.menu_index == 1)
+        if has_save:
+            bg_col_1 = (28, 38, 64) if is_sel_1 else (18, 22, 34)
+            border_col_1 = (0, 230, 255) if is_sel_1 else (45, 55, 80)
+            border_w_1 = 2 if is_sel_1 else 1
+            txt1_col = (255, 255, 255) if is_sel_1 else (180, 190, 210)
+            desc1_col = (0, 230, 255) if is_sel_1 else (130, 165, 195)
+            desc1_txt = f"Continue Level {save_info['level']}  •  Score: {save_info['score']:,}  •  Lives: {save_info['lives']}"
+        else:
+            bg_col_1 = (24, 20, 28) if is_sel_1 else (16, 18, 26)
+            border_col_1 = (160, 80, 80) if is_sel_1 else (38, 42, 54)
+            border_w_1 = 2 if is_sel_1 else 1
+            txt1_col = (160, 140, 140) if is_sel_1 else (90, 100, 115)
+            desc1_col = (220, 90, 90) if is_sel_1 else (115, 65, 65)
+            desc1_txt = "[NO SAVE FILE FOUND - START NEW GAME]"
+
+        pygame.draw.rect(self.screen, bg_col_1, btn1_rect, border_radius=8)
+        pygame.draw.rect(self.screen, border_col_1, btn1_rect, width=border_w_1, border_radius=8)
+
+        if is_sel_1:
+            cursor_x = btn_x + 32
+            cursor_y = btn1_y + btn_h // 2
+            cursor_col = (0, 230, 255) if has_save else (220, 90, 90)
+            c_angle = abs(math.sin(time_now * 12)) * 0.8
+            if c_angle < 0.1:
+                pygame.draw.circle(self.screen, cursor_col, (int(cursor_x), int(cursor_y)), 10)
+            else:
+                c_pts = [(cursor_x, cursor_y)]
+                for step in range(16):
+                    a = c_angle / 2 + (2 * math.pi - c_angle) * (step / 15.0)
+                    c_pts.append((cursor_x + 10 * math.cos(a), cursor_y + 10 * math.sin(a)))
+                pygame.draw.polygon(self.screen, cursor_col, c_pts)
+
+        txt1_title = self.font_title.render("RESUME GAME", True, txt1_col)
+        txt1_desc = self.font_small.render(desc1_txt, True, desc1_col)
+        self.screen.blit(txt1_title, (btn_x + 58, btn1_y + 14))
+        self.screen.blit(txt1_desc, (btn_x + 58, btn1_y + 39))
+
+        # 5. Controls Navigation Bar
+        foot_y = cy + 185
+        foot_w = btn_w + 40
+        foot_rect = pygame.Rect(cx - foot_w // 2, foot_y, foot_w, 36)
+        pygame.draw.rect(self.screen, (16, 20, 30), foot_rect, border_radius=6)
+        pygame.draw.rect(self.screen, (35, 45, 65), foot_rect, width=1, border_radius=6)
+
+        legend_txt = "[W / S / Up / Down] Navigate   •   [ENTER / SPACE] Select   •   [H] Leaderboard   •   [ESC] Quit"
+        foot_surf = self.font_small.render(legend_txt, True, (140, 160, 190))
+        self.screen.blit(foot_surf, (cx - foot_surf.get_width() // 2, foot_y + 11))
+
+        # 6. Highscores modal if active
+        if self.show_highscores_modal:
+            modal_w = 340
+            modal_h = 320
+            modal_x = cx - modal_w // 2
+            modal_y = cy - modal_h // 2
+
+            m_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
+            pygame.draw.rect(self.screen, (22, 26, 42), m_rect, border_radius=8)
+            pygame.draw.rect(self.screen, (255, 215, 0), m_rect, width=2, border_radius=8)
+
+            m_title = self.font_title.render("TOP 10 HIGHSCORES", True, (255, 215, 0))
+            self.screen.blit(m_title, (modal_x + (modal_w - m_title.get_width()) // 2, modal_y + 14))
+
+            top_scores = self.highscore_mgr.get_top_scores(10)
+            my = modal_y + 48
+            if not top_scores:
+                no_s = self.font_main.render("No scores recorded yet", True, (160, 170, 185))
+                self.screen.blit(no_s, (modal_x + 30, my))
+            else:
+                for idx, (p_name, p_score) in enumerate(top_scores, start=1):
+                    rank_s = f"{idx:>2}. {p_name:<12} {p_score:>8} pts"
+                    c = (255, 235, 100) if idx == 1 else (220, 225, 235)
+                    s_surf = self.font_main.render(rank_s, True, c)
+                    self.screen.blit(s_surf, (modal_x + 28, my))
+                    my += 22
+
+            hint = self.font_small.render("Press [H] or [ESC] to close", True, (140, 150, 170))
+            self.screen.blit(hint, (modal_x + (modal_w - hint.get_width()) // 2, modal_y + modal_h - 26))
+
     def run(self) -> None:
         """Main testing game loop."""
         maze_origin_x = self.margin
@@ -836,25 +1135,32 @@ class PygameTestHarness:
         sidebar_origin_x = maze_origin_x + self.maze_width + self.margin
         sidebar_origin_y = self.margin
 
-        while self.is_running:
-            dt = self.clock.tick(60) / 1000.0
-            time_now = time.time()
+        warning_manager.start()
+        try:
+            while self.is_running:
+                dt = self.clock.tick(60) / 1000.0
+                time_now = time.time()
 
-            self.handle_input()
-            self.update(dt)
+                self.handle_input()
+                self.update(dt)
 
-            self.screen.fill(COLOR_BG)
+                self.screen.fill(COLOR_BG)
 
-            self.render_hud(maze_origin_x, self.margin)
-            self.render_maze(maze_origin_x, maze_origin_y, time_now)
-            self.render_pacman(maze_origin_x, maze_origin_y, time_now)
-            self.render_ghosts(maze_origin_x, maze_origin_y, time_now)
-            self.render_overlays(maze_origin_x, maze_origin_y)
-            self.render_sidebar(sidebar_origin_x, sidebar_origin_y)
+                if self.in_start_menu:
+                    self.render_start_menu(time_now)
+                    self.render_menu_toast()
+                else:
+                    self.render_hud(maze_origin_x, self.margin)
+                    self.render_maze(maze_origin_x, maze_origin_y, time_now)
+                    self.render_pacman(maze_origin_x, maze_origin_y, time_now)
+                    self.render_ghosts(maze_origin_x, maze_origin_y, time_now)
+                    self.render_overlays(maze_origin_x, maze_origin_y)
+                    self.render_sidebar(sidebar_origin_x, sidebar_origin_y)
 
-            pygame.display.flip()
-
-        pygame.quit()
+                pygame.display.flip()
+        finally:
+            warning_manager.stop()
+            pygame.quit()
 
 
 def main() -> None:

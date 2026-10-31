@@ -1,14 +1,15 @@
-import entities
-import ghost_ai
-import consumables
+from . import entities
+from . import ghost_ai
+from . import consumables
 from enum import Enum, auto
-from maze_adapter import MazeAdapter
+from .maze_adapter import MazeAdapter
 import os
 from pathlib import Path
 import sys
 import json
-from dataclasses import asdict
-from config import Config
+from dataclasses import asdict, replace
+from .config import Config
+from .logs import log, LogType
 
 
 class EngineState(Enum):
@@ -84,14 +85,20 @@ class GameEngine:
             case Cheat.GHOST_FREEZE:
                 for ghost in self._ghosts:
                     ghost.freeze()
+        log(f"Cheat activated: {cheat.name}", "Engine", LogType.INFO)
+
+    def _calculate_level_max_time(self):
+        total_pellets = consumables.Consumable.pellets()
+        return (total_pellets / self._config.pacman_speed) * (3.0 * (self._levelconfig.ghost_speed / self._pacman.speed))
 
     def _load_level(self, seed=None):
         consumables.Consumable.reset_counter()
         levelconfig = self._config.generate_level(self._cur_level)
-        if seed is not None:
-            levelconfig.seed = seed
+        if seed is not None and self._cur_level != 1:
+            levelconfig = replace(levelconfig, seed=seed)
         self._grid = self._maze_adapter.generate_maze(levelconfig)
         self._levelconfig = levelconfig
+        log(f"Level {self._cur_level} loaded with seed {self._levelconfig.seed}", "Engine", LogType.INFO)
         corners = {
             "top_left": (1, 1),
             "top_right": (self._grid.width - 2, 1),
@@ -102,7 +109,7 @@ class GameEngine:
 
         try:
             self._pacman = entities.PacMan(
-                *center,
+                *self._grid.find_nearest_corridor(center),
                 self._config.pacman_speed,
                 self._grid,
                 self._pacman.lives,
@@ -163,7 +170,7 @@ class GameEngine:
                         consumables.ScoreEffect(self._config.points_per_super_pacgum)
                         ]))
         self._is_game_over = False
-        self._level_time = self._levelconfig.level_max_time
+        self._level_time = self._calculate_level_max_time()
         self._respawn_timer = 3.0
         self._is_level_loaded = True
         self._skip_level = False
@@ -230,129 +237,177 @@ class GameEngine:
             self._is_game_over = True
             self._state = EngineState.GAME_OVER
 
-    def _save_states(self):
-        states = {
-            "engine": None,
-            "ghosts": None,
-            "pacman": None,
-            "maze": None,
-            "seed": None
-        }
-
-        states["engine"] = {
-            "_cur_level": self._cur_level,
-            "_score": self._score,
-            "_state": {self._state.name: self._respawn_timer if self._state is EngineState.RESPAWNING else None},
-            "is_level_loaded": self._is_level_loaded,
-            "_level_time": self._level_time if self._is_level_loaded else None
-        }
-
-        if self._is_level_loaded:
-
-            for ghost in self._ghosts:
-                states["ghosts"].update({
-                    ghost.name: {
-                        "_spawn_x": ghost.spawn[0],
-                        "_spawn_y": ghost.spawn[1],
-                        "_x": ghost.x,
-                        "_y": ghost.y,
-                        "_speed": ghost.speed,
-                        "_cur_direction": ghost.cur_direction.name,
-                        "_next_direction": ghost.next_direction.name,
-                        "_state": ghost.state.name,
-                        "_target_tile": ghost.target_tile,
-                        "_frightened_time": ghost.frightened_duration
+    def _save_states(self) -> bool:                                                                                                                                                                 
+            """Safely serialize engine state and session config into a single atomic file."""                                                                                                           
+            try:                                                                                                                                                                                        
+                states = {                                                                                                                                                                              
+                    # 1. Embed session configuration so next levels scale consistently                                                                                                                  
+                    "config": asdict(self._config),                                                                                                                                                     
+                    "engine": {                                                                                                                                                                         
+                        "_cur_level": self._cur_level,                                                                                                                                                  
+                        "_score": self._score,                                                                                                                                                          
+                        "_state": self._state.name,                                                                                                                                                     
+                        "_respawn_timer": getattr(self, "_respawn_timer", 3.0),                                                                                                                         
+                        "_is_level_loaded": self._is_level_loaded,                                                                                                                                      
+                        "_level_time": getattr(self, "_level_time", None) if self._is_level_loaded else None,                                                                                           
+                    },                                                                                                                                                                                  
+                    "ghosts": {},                                                                                                                                                                       
+                    "pacman": {},                                                                                                                                                                       
+                    "maze_eaten": [],                                                                                                                                                                   
+                    "seed": getattr(self._levelconfig, "seed", None) if self._is_level_loaded else None,                                                                                                
+                }                                                                                                                                                                                       
+                                                                                                                                                                                                        
+                if self._is_level_loaded:                                                                                                                                                               
+                    for ghost in self._ghosts:                                                                                                                                                          
+                        states["ghosts"][ghost.name] = {                                                                                                                                                
+                            "_spawn_x": ghost.spawn[0],                                                                                                                                                 
+                            "_spawn_y": ghost.spawn[1],                                                                                                                                                 
+                            "_x": ghost.x,                                                                                                                                                       
+                            "_y": ghost.y,                                                                                                                                                       
+                            "_speed": ghost.speed,                                                                                                                                               
+                            "_cur_direction": ghost.cur_direction.name,                                                                                                                                 
+                            "_next_direction": ghost.next_direction.name,                                                                                                                               
+                            "_state": ghost.state.name,                                                                                                                                                 
+                            "_target_tile": ghost.target_tile if ghost.target_tile else None,                                                                                                     
+                            "_frightened_time": getattr(ghost, "_frightened_time", 0.0),                                                                                                                
+                        }                                                                                                                                                                               
+                                                                                                                                                                                                        
+                    states["pacman"] = {                                                                                                                                                                
+                        "_spawn_x": self._pacman.spawn[0],                                                                                                                                              
+                        "_spawn_y": self._pacman.spawn[1],                                                                                                                                              
+                        "_x": self._pacman.x,                                                                                                                                                    
+                        "_y": self._pacman.y,                                                                                                                                                    
+                        "_speed": self._pacman.speed,                                                                                                                                            
+                        "_lives": self._pacman.lives,                                                                                                                                              
+                        "_cur_direction": self._pacman.cur_direction.name,                                                                                                                              
+                        "_next_direction": self._pacman.next_direction.name,                                                                                                                            
+                        "_invincible": self._pacman.is_invincible,                                                                                                                                
                     }
-                })
+                                                                                                                                                                                                        
+                    for row in self._grid.grid:                                                                                                                                                         
+                        for cell in row:                                                                                                                                                                
+                            if not cell.is_wall and not cell.consumes:                                                                                                                                  
+                                states["maze_eaten"].append((cell.x, cell.y))                                                                                                                           
+                                                                                                                                                                                                        
+                states_file = self._data_dir / "pacman_states.json"
+                self._data_dir.mkdir(parents=True, exist_ok=True)
+                states_file.write_text(json.dumps(states, indent=2), encoding="utf-8")
+                log(f"Engine state saved to '{states_file.name}'", "Engine", LogType.INFO)
+                return True
 
-            states["pacman"] = {
-                "_spawn_x": self._pacman.spawn[0],
-                "_spawn_y": self._pacman.spawn[1],
-                "_x": self._pacman.x,
-                "_y": self._pacman.y,
-                "_speed": self._pacman.speed,
-                "_lives": self._pacman.lives,
-                "_cur_direction": self._pacman.cur_direction.name,
-                "_next_direction": self._pacman.next_direction.name,
-                "_invincible": self._pacman.is_invincible
-            }
+            except (OSError, TypeError) as err:
+                log(f"Failed to save state ({err})", "Engine", LogType.WARNING)
+            return False
 
-            states["maze"] = []
-
-            for row in self._grid.grid:
-                for cell in row:
-                    if cell.is_wall:
-                        continue
-                    if not cell.consumes:
-                        states["maze"].append((cell.x, cell.y))
-
-            states["seed"] = self._levelconfig.seed
-
-        config_file = self._data_dir / "config.json"
-
+    def _load_states(self) -> bool:
+        """Safely deserialize engine state and session config from disk."""
         states_file = self._data_dir / "pacman_states.json"
 
-        with open(str(config_file), "w") as cf, open(str(states_file), "w") as sf:
-            json.dump(asdict(self._config), cf, indent=2)
-            json.dump(states, sf, indent=2)
+        if not states_file.is_file():
+            log(f"Save file not found at {states_file}", "Engine", LogType.WARNING)
+            return False
 
-    def _load_states(self):
+        try:
+            states = json.loads(states_file.read_text(encoding="utf-8"))
+            if not states or not isinstance(states, dict):
+                log("Invalid or empty save file", "Engine", LogType.WARNING)
+                return False
 
-        config_file = self._data_dir / "config.json"
+            # load Config states
+            if "config" in states and isinstance(states["config"], dict):
+                self._config = Config(**states["config"])
+                MazeAdapter.set_maze_size((self._config.width, self._config.height))
 
-        states_file = self._data_dir / "pacman_states.json"
+            # load engine states
+            engine_data = states.get("engine", {})
+            if not engine_data:
+                log("Engine data missing from save file", "Engine", LogType.WARNING)
 
-        with open(str(states_file), "w") as sf:
-            global_states = json.load(sf)
+            self._cur_level = engine_data.get("_cur_level", 1)
+            self._score = engine_data.get("_score", 0)
 
-        self._cur_level = global_states["engine"]["_cur_level"]
+            if not engine_data.get("_is_level_loaded", False):
+                state_name = engine_data.get("_state", "RESPAWNING")
+                self._state = EngineState[state_name] if state_name in EngineState.__members__ else EngineState.RESPAWNING
+                self._respawn_timer = engine_data.get("_respawn_timer", 3.0)
+                return True
 
-        if not global_states["engine"]["_cur_level"]["is_level_loaded"]:
-            state, value = list(global_states["engine"]["_state"].items())[0]
-            
-            state = EngineState(state)
+            seed = states.get("seed", 42)
+            self._load_level(seed)
 
-            if state is EngineState.RESPAWNING:
-                self._respawn_timer = value
+            self._level_time = engine_data.get("_level_time", 90.0)
+            state_name = engine_data.get("_state", "PLAYING")
+            self._state = EngineState[state_name] if state_name in EngineState.__members__ else EngineState.PLAYING
+            self._respawn_timer = engine_data.get("_respawn_timer", 3.0)
 
-            self._state = EngineState.RESPAWNING
-            return
+            # load ghosts states
+            saved_ghosts = states.get("ghosts", {})
+            for ghost in self._ghosts:
+                if ghost.name in saved_ghosts:
+                    saved_gt_state = saved_ghosts[ghost.name]
 
+                    cur_d = saved_gt_state.get("_cur_direction", "NONE")
+                    next_d = saved_gt_state.get("_next_direction", "NONE")
 
-        self._config = Config.from_file(config_file)
-        self._load_level(global_states["seed"])
+                    cur_d = entities.Direction[cur_d] if cur_d in entities.Direction.__members__ else entities.Direction.NONE
+                    next_d = entities.Direction[next_d] if next_d in entities.Direction.__members__ else entities.Direction.NONE
 
-        for key, value in global_states["engine"].items():
-            if key in {"_state", "_cur_level"}:
-                continue
-            setattr(self, key, value)
+                    ghost_state = saved_gt_state.get("_state", "WANDER")
+                    ghost_state = entities.GhostState[ghost_state] if ghost_state in entities.GhostState.__members__ else entities.GhostState.WANDER
 
-        state, value = list(global_states["engine"]["_state"].items())[0]
+                    raw_target = saved_gt_state.get("_target_tile")
 
-        self._state = EngineState(state)
+                    new_states = {
+                        "_spawn_x": saved_gt_state.get("_spawn_x", ghost.spawn[0]),
+                        "_spawn_y": saved_gt_state.get("_spawn_y", ghost.spawn[1]),
+                        "_x": saved_gt_state.get("_x", ghost.x),
+                        "_y": saved_gt_state.get("_y", ghost.y),
+                        "_speed": saved_gt_state.get("_speed", ghost.speed),
+                        "_cur_direction": cur_d,
+                        "_next_direction": next_d,
+                        "_state": ghost_state,
+                        "_target_tile": tuple(raw_target) if raw_target and len(raw_target) == 2 else None,
+                        "_frightened_time": saved_gt_state.get("_frightened_time", 0.0),
+                    }
+                    ghost.update_fields(new_states)
 
-        if self._state is EngineState.RESPAWNING:
-            self._respawn_timer = value
+            # load pacman states
+            pacman_data = states.get("pacman", {})
+            if pacman_data:
+                cur_d = pacman_data.get("_cur_direction", "NONE")
+                next_d = pacman_data.get("_next_direction", "NONE")
 
-        if self._state is EngineState.STOPPED:
-            self._state = EngineState.PLAYING
+                cur_d = entities.Direction[cur_d] if cur_d in entities.Direction.__members__ else entities.Direction.NONE
+                next_d = entities.Direction[next_d] if next_d in entities.Direction.__members__ else entities.Direction.NONE
 
-        self.stop()
+                new_states = {
+                    "_spawn_x": pacman_data.get("_spawn_x", self._pacman.spawn[0]),
+                    "_spawn_y": pacman_data.get("_spawn_y", self._pacman.spawn[1]),
+                    "_x": pacman_data.get("_x", self._pacman.x),
+                    "_y": pacman_data.get("_y", self._pacman.y),
+                    "_speed": pacman_data.get("_speed", self._pacman.speed),
+                    "_lives": pacman_data.get("_lives", self._pacman.lives),
+                    "_cur_direction": cur_d,
+                    "_next_direction": next_d,
+                    "_invincible": pacman_data.get("_invincible", False),
+                }
+                self._pacman.update_fields(new_states)
 
-        for ghost in self._ghosts:
-            for key, value in global_states["ghosts"][ghost.name].items():
-                if key == "_state":
-                    value = entities.GhostState(value)
-                setattr(ghost, key, value)
+            # load maze states
+            for x, y in states.get("maze_eaten", []):
+                cell = self._grid.get_cell(x, y)
+                if cell.consumes:
+                    if consumables.Consumable.still_any_consumables():
+                        consumables.Consumable.decrease_counter()
+                cell.remove_consumables()
 
-        for key, value in global_states["pacman"].items():
-            setattr(self._pacman, key, value)
+            self.stop()
+            log(f"Engine state restored (Level {self._cur_level}, Score {self._score})", "Engine", LogType.INFO)
+            return True
 
-        for x, y in global_states["maze"]:
-            cell = self._grid.get_cell(x, y)
-            for consumable in cell.consumes:
-                consumable.effect(self)
-            cell.remove_consumables()
+        except (json.JSONDecodeError, KeyError, OSError, ValueError) as err:
+            log(f"Failed to load state ({err})", "Engine", LogType.WARNING)
+            return False
 
     @staticmethod
     def _get_save_path(app_name: str = "pacman") -> Path:

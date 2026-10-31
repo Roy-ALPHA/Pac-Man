@@ -7,38 +7,8 @@ import math
 class GhostStrategy(ABC):
 
     @staticmethod
-    def closer_corridor(coor, maze):
-        if not maze.is_wall(*coor):
-            return coor
-
-        x = coor[0]
-        y = coor[1]
-        x = max(1, min(coor[0], maze.width - 2))
-        y = max(1, min(coor[1], maze.height - 2))
-        coor = (x, y)
-
-        queue = [coor]
-        visited = {coor}
-
-        while queue:
-
-            x, y = queue.pop(0)
-
-            for d in PRIORITY_DIRECTIONS:
-
-                n_x, n_y = x+d.dx, y+d.dy
-                if (n_x, n_y) in visited:
-                    continue
-
-                if not maze.is_wall(n_x, n_y):
-                    return n_x, n_y
-
-                queue.append((n_x, n_y))
-                visited.add((n_x, n_y))
-
-    @staticmethod
-    def _go_to(from_coor, to_coor, opposite, maze, test=None):
-        target = GhostStrategy.closer_corridor(to_coor, maze)
+    def _go_to(from_coor, to_coor, opposite, maze):
+        target = maze.find_nearest_corridor(to_coor)
 
         if from_coor == target:
             return GhostStrategy._wander(from_coor, opposite, maze)

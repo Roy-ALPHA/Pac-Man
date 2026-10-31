@@ -37,16 +37,23 @@ class Consumable(ABC):
         return cls._counter > 0
 
     @classmethod
+    def decrease_counter(cls):
+        cls._counter -= 1
+
+    @classmethod
     def reset_counter(cls):
         cls._counter = 0
 
+    @classmethod
+    def pellets(cls):
+        return cls._counter
+
     def effect(self, engine):
         if Consumable.still_any_consumables() > 0:
-            Consumable._counter -= 1
+            Consumable.decrease_counter()
 
         for effect in self._effects:
             effect.apply(engine)
-
 
 class PacGum(Consumable):
     pass

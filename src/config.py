@@ -2,10 +2,9 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 from typing import Any
-from errors import PacmanConfigWarning
 from lark import Lark
-from warnings import warn
-from maze_adapter import MazeAdapter
+from .logs import log, LogType
+from .maze_adapter import MazeAdapter
 import random
 
 
@@ -28,39 +27,39 @@ class Config:
     points_per_ghost: int = 200
     frightened_duration: float = 8.0
     ghost_speed: float = 3.0
-    pacman_speed: float = 3.0
+    pacman_speed: float = 5.0
     seed: int = 42
     level_max_time: int = 90
-    highscore_filename: str = Path("highscores.json")
+    # highscore_filename: str = Path("highscores.json")
 
     @classmethod
-    def _set_maze_size(cls, width, height):
+    def set_maze_size(cls, width, height):
         MazeAdapter.set_maze_size((width, height))
 
     @classmethod
     def from_file(cls, path: Path) -> "Config":
         # --- File System Checks ---
         if not path.exists():
-            warn(
+            log(
                 f"Config file not found at '{path}'. Fallback to default configuration.",
-                category=PacmanConfigWarning,
-                stacklevel=2,
+                "Config",
+                LogType.WARNING,
             )
             return cls()
 
         if not path.is_file():
-            warn(
+            log(
                 f"Path '{path}' is not a regular file (directory or link). Fallback to default configuration.",
-                category=PacmanConfigWarning,
-                stacklevel=2,
+                "Config",
+                LogType.WARNING,
             )
             return cls()
 
         if path.suffix != ".json":
-            warn(
+            log(
                 f"Config file '{path.name}' must have a '.json' extension (got '{path.suffix}'). Fallback to default configuration.",
-                category=PacmanConfigWarning,
-                stacklevel=2,
+                "Config",
+                LogType.WARNING,
             )
             return cls()
 
@@ -71,30 +70,31 @@ class Config:
 
             raw_dict = json.loads(clean_text)
             if not isinstance(raw_dict, dict):
-                warn(
+                log(
                     f"Root JSON element in '{path.name}' must be an object/dict (got {type(raw_dict).__name__}). Fallback to default configuration.",
-                    category=PacmanConfigWarning,
-                    stacklevel=2,
+                    "Config",
+                    LogType.WARNING,
                 )
                 return cls()
 
             clamped_data = cls._clamp_defaults(raw_dict)
-            cls._set_maze_size(clamped_data["width"], clamped_data["height"])
+            cls.set_maze_size(clamped_data["width"], clamped_data["height"])
+            log(f"Successfully loaded configuration from '{path.name}'", "Config", LogType.INFO)
             return cls(**clamped_data)
 
         except json.JSONDecodeError as err:
-            warn(
+            log(
                 f"Invalid JSON syntax in '{path.name}' at line {err.lineno}, col {err.colno}: {err.msg}. Fallback to default configuration.",
-                category=PacmanConfigWarning,
-                stacklevel=2,
+                "Config",
+                LogType.WARNING,
             )
             return cls()
 
         except Exception as err:
-            warn(
+            log(
                 f"Unexpected error while loading '{path.name}' ({err.__class__.__name__}: {err}). Fallback to default configuration.",
-                category=PacmanConfigWarning,
-                stacklevel=2,
+                "Config",
+                LogType.WARNING,
             )
             return cls()
 
@@ -132,19 +132,19 @@ class Config:
             "points_per_super_pacgum": 50,
             "points_per_ghost": 200,
             "frightened_duration": 8.0,
-            "ghost_speed": 10.0,
-            "pacman_speed": 3.0,
+            "ghost_speed": 3.0,
+            "pacman_speed": 5.0,
             "seed": 42,
-            "level_max_time": 90,
-            "highscore_filename": Path("highscores.json")
+            "level_max_time": 90
+            # "highscore_filename": Path("highscores.json")
         }
 
         def validate_int_field(key: str, min_val: int | None = None, max_val: int | None = None):
             if key not in data:
-                warn(
+                log(
                     f"Missing '{key}' in config. Using default: {clamped[key]}.",
-                    category=PacmanConfigWarning,
-                    stacklevel=3,
+                    "Config",
+                    LogType.WARNING,
                 )
                 return
 
@@ -160,10 +160,10 @@ class Config:
                 clamped[key] = val
             else:
                 condition_msg = f">= {min_val}" if min_val is not None else (f"<= {max_val}" if max_val is not None else "an integer")
-                warn(
+                log(
                     f"Invalid value for '{key}': got {val!r}, expected {condition_msg}. Using default: {clamped[key]}.",
-                    category=PacmanConfigWarning,
-                    stacklevel=3,
+                    "Config",
+                    LogType.WARNING,
                 )
 
         validate_int_field("width", min_val=7)
@@ -172,52 +172,52 @@ class Config:
         validate_int_field("points_per_pacgum", min_val=0)
         validate_int_field("points_per_super_pacgum", min_val=0)
         validate_int_field("points_per_ghost", min_val=0)
-        validate_int_field("seed")
-        validate_int_field("level_max_time", min_val=0)
+        validate_int_field("seed", min_val=1)
+        validate_int_field("level_max_time", min_val=20)
 
         if "frightened_duration" in data:
             match data["frightened_duration"]:
                 case (float() | int()) as value if value >= 0:
                     clamped["frightened_duration"] = value
                 case _:
-                    warn
+                    log(f"Invalid frightened_duration: {data['frightened_duration']!r}. Using default: {clamped['frightened_duration']}.", "Config", LogType.WARNING)
         else:
-            warn
+            log(f"Missing frightened_duration in config. Using default: {clamped['frightened_duration']}.", "Config", LogType.WARNING)
 
         if "ghost_speed" in data:
             match data["ghost_speed"]:
-                case (float() | int()) as value if value >= 0:
+                case (float() | int()) as value if value > 0:
                     clamped["ghost_speed"] = data["ghost_speed"]
                 case _:
-                    warn
+                    log(f"Invalid ghost_speed: {data['ghost_speed']!r}. Using default: {clamped['ghost_speed']}.", "Config", LogType.WARNING)
         else:
-            warn
+            log(f"Missing ghost_speed in config. Using default: {clamped['ghost_speed']}.", "Config", LogType.WARNING)
 
         if "pacman_speed" in data:
             match data["pacman_speed"]:
-                case (float() | int()) as value if value >= 0:
+                case (float() | int()) as value if value > 0:
                     clamped["pacman_speed"] = data["pacman_speed"]
                 case _:
-                    warn
+                    log(f"Invalid pacman_speed: {data['pacman_speed']!r}. Using default: {clamped['pacman_speed']}.", "Config", LogType.WARNING)
         else:
-            warn
+            log(f"Missing pacman_speed in config. Using default: {clamped['pacman_speed']}.", "Config", LogType.WARNING)
 
-        if "highscore_filename" not in data:
-            warn(
-                f"Missing 'highscore_filename' in config. Using default: '{clamped['highscore_filename']}'.",
-                category=PacmanConfigWarning,
-                stacklevel=2,
-            )
-        else:
-            raw_path = data["highscore_filename"]
-            if not isinstance(raw_path, str):
-                warn(
-                    f"Invalid 'highscore_filename': got {raw_path!r}, expected a string path. Using default: '{clamped['highscore_filename']}'.",
-                    category=PacmanConfigWarning,
-                    stacklevel=2,
-                )
-            else:
-                clamped["highscore_filename"] = Path(raw_path)
+        # if "highscore_filename" not in data:
+        #     warn(
+        #         f"Missing 'highscore_filename' in config. Using default: '{clamped['highscore_filename']}'.",
+        #         category=PacmanConfigWarning,
+        #         stacklevel=2,
+        #     )
+        # else:
+        #     raw_path = data["highscore_filename"]
+        #     if not isinstance(raw_path, str):
+        #         warn(
+        #             f"Invalid 'highscore_filename': got {raw_path!r}, expected a string path. Using default: '{clamped['highscore_filename']}'.",
+        #             category=PacmanConfigWarning,
+        #             stacklevel=2,
+        #         )
+        #     else:
+        #         clamped["highscore_filename"] = Path(raw_path)
 
         return clamped
 

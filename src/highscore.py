@@ -1,8 +1,7 @@
 import json
 from pathlib import Path
 import re
-from warnings import warn
-from .errors import HighscoreManagerWarning
+from .logs import log, LogType
 
 
 class HighscoreManager:
@@ -12,14 +11,14 @@ class HighscoreManager:
 		self._scores: dict = {}
 
 		if (
-				not self._file_path.exists()
-				or not self._file_path.is_file()
-				or self._file_path.suffix != ".json"
+			not self._file_path.exists()
+			or not self._file_path.is_file()
+			or self._file_path.suffix != ".json"
 		):
-			warn(
-					f"Invalid or missing file: '{self._file_path}'. Fallback: starting with an empty leaderboard.",
-					category=HighscoreManagerWarning,
-					stacklevel=2,
+			log(
+				f"Invalid or missing file: '{self._file_path}'. Fallback: starting with an empty leaderboard.",
+				"Highscore",
+				LogType.WARNING,
 			)
 			return
 
@@ -27,35 +26,36 @@ class HighscoreManager:
 			data = json.loads(self._file_path.read_text())
 
 			if not isinstance(data, dict) or not data:
-				warn(
-						f"File '{self._file_path.name}' is empty or not a valid JSON dict. Fallback: starting with an empty leaderboard.",
-						category=HighscoreManagerWarning,
-						stacklevel=2,
+				log(
+					f"File '{self._file_path.name}' is empty or not a valid JSON dict. Fallback: starting with an empty leaderboard.",
+					"Highscore",
+					LogType.WARNING,
 				)
 				return
 
 			cleaned_data = {}
 			for name, score in data.items():
 				if (
-						isinstance(name, str)
-						and isinstance(score, int)
-						and not isinstance(score, bool)
+					isinstance(name, str)
+					and isinstance(score, int)
+					and not isinstance(score, bool)
 				):
 					cleaned_data[name] = score
 				else:
-					warn(
-							f"Skipped invalid entry ({name!r}: {score!r}). Fallback: entry omitted from leaderboard.",
-							category=HighscoreManagerWarning,
-							stacklevel=2,
+					log(
+						f"Skipped invalid entry ({name!r}: {score!r}). Fallback: entry omitted from leaderboard.",
+						"Highscore",
+						LogType.WARNING,
 					)
 
 			self._scores = cleaned_data
+			log(f"Loaded {len(self._scores)} highscore entries from '{self._file_path.name}'", "Highscore", LogType.INFO)
 
 		except (json.JSONDecodeError, OSError, AttributeError) as err:
-			warn(
+			log(
 					f"Failed to read/parse highscore file: {err}. Fallback: starting with an empty leaderboard.",
-					category=HighscoreManagerWarning,
-					stacklevel=2,
+					"Highscore",
+					LogType.WARNING,
 			)
 
 	@property
@@ -73,33 +73,21 @@ class HighscoreManager:
 
 		if len(cleaned_name) > 10:
 			warn_msg = f"Name '{cleaned_name}' is too long (max 10 characters). Score rejected: not saved."
-			warn(
-						warn_msg,
-						category=HighscoreManagerWarning,
-						stacklevel=3
-						)
+			log(warn_msg, "Highscore", LogType.WARNING)
 			return False, warn_msg
 
 		if type(score) is not int or score < 0:
 			warn_msg = f"Score must be a positive integer, got {score!r}. Score rejected: not saved."
-			warn(
-						warn_msg,
-						category=HighscoreManagerWarning,
-						stacklevel=3
-						)
+			log(warn_msg, "Highscore", LogType.WARNING)
 			return False, warn_msg
 
 		invalid_pattern = r"[^a-zA-Z0-9 ]+"
 		if not cleaned_name or re.search(invalid_pattern, cleaned_name):
 			warn_msg = (
-					f"Name '{cleaned_name}' is empty or contains forbidden characters"
-					" (alphanumeric and spaces only). Score rejected: not saved."
+				f"Name '{cleaned_name}' is empty or contains forbidden characters"
+				" (alphanumeric and spaces only). Score rejected: not saved."
 			)
-			warn(
-						warn_msg,
-						category=HighscoreManagerWarning,
-						stacklevel=3
-						)
+			log(warn_msg, "Highscore", LogType.WARNING)
 			return False, warn_msg
 
 		return True, ""
@@ -115,25 +103,17 @@ class HighscoreManager:
 			old_score = self._scores[name]
 			if score > old_score:
 				warn_msg = (
-						f"Player '{name}' already exists with score {old_score}. "
-						f"Replacement: updated to new personal best {score}."
+					f"Player '{name}' already exists with score {old_score}. "
+					f"Replacement: updated to new personal best {score}."
 				)
-				warn(
-					warn_msg,
-					category=HighscoreManagerWarning,
-					stacklevel=2,
-				)
+				log(warn_msg, "Highscore", LogType.INFO)
 				self._scores[name] = score
 			else:
 				warn_msg = (
-						f"Player '{name}' already exists with higher score ({old_score} >= {score}). "
-						f"Replacement: kept existing score {old_score}."
+					f"Player '{name}' already exists with higher score ({old_score} >= {score}). "
+					f"Replacement: kept existing score {old_score}."
 				)
-				warn(
-						warn_msg,
-						category=HighscoreManagerWarning,
-						stacklevel=2,
-				)
+				log(warn_msg, "Highscore", LogType.WARNING)
 				return False, warn_msg
 		else:
 			self._scores[name] = score
@@ -144,13 +124,10 @@ class HighscoreManager:
 			self._file_path.write_text(
 					json.dumps(top10_highscores, indent=2)
 			)
+			log(f"Successfully saved highscore for '{name}': {score} pts", "Highscore", LogType.INFO)
 		except OSError as err:
 			warn_msg = f"Failed to write scores to disk: {err}. Score changes retained in memory only."
-			warn(
-						warn_msg,
-						category=HighscoreManagerWarning,
-						stacklevel=2
-						)
+			log(warn_msg, "Highscore", LogType.WARNING)
 			return False, warn_msg
 
 		return True, ""

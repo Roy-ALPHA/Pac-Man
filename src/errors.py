@@ -13,6 +13,10 @@ class HighscoreManagerWarning(UserWarning):
     pass
 
 
+class EngineWarning(UserWarning):
+    pass
+
+
 def _pacman_warning_formatter(msg, category, filename, lineno, line=None):
     YELLOW = "\033[93m"
     RED = "\033[91m"

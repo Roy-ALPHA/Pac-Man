@@ -90,6 +90,10 @@ class Entity(ABC):
     def respawn(self):
         pass
 
+    def update_fields(self, states):
+        for key, value in states.items():
+            setattr(self, key, value)
+
     def can_move(self, direction):
         if direction is Direction.NONE:
             return False
@@ -196,7 +200,7 @@ class PacMan(Entity):
 class Ghost(Entity):
     def __init__(self, spawn_x, spawn_y, speed, grid, strategy, pacman, name, blinky=None):
         super().__init__(spawn_x, spawn_y, speed, grid, name)
-        self._state = GhostState.WANDER
+        self._state = GhostState.CHASE
         self._strategy = strategy
         self._pacman = pacman
         self._blinky = blinky
@@ -226,12 +230,12 @@ class Ghost(Entity):
         self._x, self._y = self._spawn_x, self._spawn_y
         self._cur_direction = Direction.NONE
         self._next_direction = Direction.NONE
-        self._state = GhostState.WANDER
+        self._state = GhostState.CHASE
         if self.is_frozen:
             self.freeze()
 
     def _request_direction(self, blinky=None):
-        if self._next_direction is Direction.NONE or self._target_tile is None or self._target_tile == self.tile:
+        if self._next_direction is Direction.NONE or self._target_tile is None or self._target_tile == self.tile or self._grid.is_wall(*self._target_tile):
             self._next_direction = self._strategy.compute_next_move(
                 self, self._pacman, self._grid, blinky
             )
@@ -266,13 +270,16 @@ class Ghost(Entity):
             case GhostState.FRIGHTENED:
                 self._frightened_time -= dt
                 if self._frightened_time <= 0:
-                    self.switch_state(GhostState.WANDER)
+                    self.switch_state(GhostState.CHASE)
             case GhostState.DIED if self.tile == (self._spawn_x, self._spawn_y):
-                self.switch_state(GhostState.WANDER)
-            case GhostState.WANDER if dist <= 10:
                 self.switch_state(GhostState.CHASE)
-            case GhostState.CHASE if dist > 10:
-                self.switch_state(GhostState.WANDER)
+            # case GhostState.WANDER if dist <= 10000:
+            #     self.switch_state(GhostState.CHASE)
+            # case GhostState.CHASE if dist > 10:
+            #     self.switch_state(GhostState.WANDER)
+
+        if self._state is GhostState.WANDER:
+            self._state = GhostState.CHASE
 
         if self._pacman.is_invincible and self._state not in {GhostState.WANDER, GhostState.FRIGHTENED}:
             self.switch_state(GhostState.WANDER)

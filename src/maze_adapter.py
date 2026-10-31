@@ -1,11 +1,11 @@
 from mazegenerator import MazeGenerator
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from consumables import Consumable
+from .consumables import Consumable
 import io
 from contextlib import redirect_stdout
-import warnings
-from errors import MazeAdapterWarning
+from .logs import log, LogType
+from .entities import PRIORITY_DIRECTIONS
 
 
 class CellType(Enum):
@@ -58,11 +58,40 @@ class MazeGrid:
             return self.grid[y][x].is_wall
         return True
 
+    def find_nearest_corridor(self, coor):
+        if not self.is_wall(*coor):
+            return coor
+
+        x = coor[0]
+        y = coor[1]
+        x = max(1, min(coor[0], self.width - 2))
+        y = max(1, min(coor[1], self.height - 2))
+        coor = (x, y)
+
+        queue = [coor]
+        visited = {coor}
+
+        while queue:
+
+            x, y = queue.pop(0)
+
+            for d in PRIORITY_DIRECTIONS:
+
+                n_x, n_y = x+d.dx, y+d.dy
+                if (n_x, n_y) in visited:
+                    continue
+
+                if not self.is_wall(n_x, n_y):
+                    return n_x, n_y
+
+                queue.append((n_x, n_y))
+                visited.add((n_x, n_y))
+
 
 class MazeAdapter:
 
-    _width = None
-    _height = None
+    _width = 15
+    _height = 15
 
     def __init__(self):
         self._generator_cls = MazeGenerator
@@ -104,11 +133,7 @@ class MazeAdapter:
                 maze_exit=(ext_x - 1, ext_y // 2)
             )
         except Exception as e:
-            warnings.warn(
-                f"Maze generation failure: {e}",
-                category=MazeAdapterWarning,
-                stacklevel=2
-                )
+            log(f"Maze generation failure: {e}", "MazeAdapter", LogType.WARNING)
             raise
 
     @staticmethod
@@ -162,8 +187,4 @@ class MazeAdapter:
     def _warn(warn_msgs):
         for warn_msg in warn_msgs.splitlines():
             msg = warn_msg.strip()
-            warnings.warn(
-                msg,
-                category=MazeAdapterWarning,
-                stacklevel=3
-            )
+            log(msg, "MazeAdapter", LogType.WARNING)

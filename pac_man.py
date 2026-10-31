@@ -9,19 +9,20 @@ import threading
 
 class LogType(Enum):
     WARNING = auto()
-    LOG = auto()
+    INFO = auto()
+    LOG = INFO
 
     def ansi(self):
         match self:
-            case LogType.LOG:
-                return f"{Fore.LIGHTGREEN_EX}{Style.BRIGHT}Log{Fore.RESET}"
+            case LogType.INFO:
+                return f"{Fore.LIGHTGREEN_EX}{Style.BRIGHT}Info{Fore.RESET}"
             case LogType.WARNING:
                 return f"{Fore.LIGHTRED_EX}{Style.BRIGHT}Warning{Fore.RESET}"
 
     def text(self):
         match self:
-            case LogType.LOG:
-                return "Log"
+            case LogType.INFO:
+                return "Info"
             case LogType.WARNING:
                 return "Warning"
 
@@ -155,9 +156,9 @@ class WarningManager:
         ]
 
         frames = []
-        spaces = "      " if log_type is LogType.LOG else "  "
+        spaces = "     " if log_type is LogType.INFO else "  "
 
-        color = Fore.LIGHTGREEN_EX if log_type is LogType.LOG else Fore.LIGHTRED_EX
+        color = Fore.LIGHTGREEN_EX if log_type is LogType.INFO else Fore.LIGHTRED_EX
 
         for i in range(len(msg)):
 
