@@ -21,7 +21,7 @@ class Screen(ABC):
 
     @staticmethod
     def _load_img(path: str) -> pygame.Surface:
-        return pygame.image.load(f"assets/{path}")
+        return pygame.image.load(f"src/assets/{path}")
 
     @abstractmethod
     def handle_input(self, command: InputCommand) -> None:

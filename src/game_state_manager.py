@@ -1,8 +1,8 @@
-from ui.inputhandler import InputCommand
-from ui.screen import Screen
-from ui.renderer import Renderer
-from main_menu_screen import MainMenuScreen
-from playscreen import PlayScreen
+from .ui.inputhandler import InputCommand
+from .ui.screen import Screen
+from .ui.renderer import Renderer
+from .main_menu_screen import MainMenuScreen
+from .playscreen import PlayScreen
 
 
 class GameStateManager:

@@ -1,6 +1,6 @@
-from ui.screen import Screen
-from ui.renderer import Renderer
-from ui.inputhandler import InputCommand
+from .ui.screen import Screen
+from .ui.renderer import Renderer
+from .ui.inputhandler import InputCommand
 import pygame
 
 

@@ -9,14 +9,14 @@ class RenderGhost:
         self._screen = screen
 
         self._paths = {
-            "Blinky": "assets/entities/ghost_blinky.png",
-            "Pinky": "assets/entities/ghost_pinky.png",
-            "Inky": "assets/entities/ghost_inky.png",
-            "Clyde": "assets/entities/ghost_clyde.png",
+            "Blinky": "src/assets/entities/ghost_blinky.png",
+            "Pinky": "src/assets/entities/ghost_pinky.png",
+            "Inky": "src/assets/entities/ghost_inky.png",
+            "Clyde": "src/assets/entities/ghost_clyde.png",
         }
     
-        self._eyes_path = "assets/entities/ghost_eyes.png"
-        self._scared_path = "assets/entities/ghost_frightened.png"
+        self._eyes_path = "src/assets/entities/ghost_eyes.png"
+        self._scared_path = "src/assets/entities/ghost_frightened.png"
         self._rows = {(1, 0): 0, (0, 1): 1, (-1, 0): 2, (0, -1): 3}
         self._default_dir = (-1, 0)
         self._frames = 8

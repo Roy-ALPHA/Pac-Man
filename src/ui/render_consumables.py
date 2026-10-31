@@ -1,15 +1,15 @@
 import pygame
 from enum import Enum
-from consumables import SuperPacGum
+from ..consumables import SuperPacGum
 
 
 class CumsStyle(Enum):
 
-    ROSE = "assets/maze/rose_cums.png"
-    BLUE = "assets/maze/blue_cums.png" 
-    GREEN = "assets/maze/green_pellets.png"
-    ORNG = "assets/maze/orng_cums.png"
-    RED = "assets/maze/red_pellets.png"
+    ROSE = "src/assets/maze/rose_cums.png"
+    BLUE = "src/assets/maze/blue_cums.png" 
+    GREEN = "src/assets/maze/green_pellets.png"
+    ORNG = "src/assets/maze/orng_cums.png"
+    RED = "src/assets/maze/red_pellets.png"
     
 
 

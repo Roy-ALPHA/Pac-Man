@@ -1,6 +1,6 @@
 from enum import Enum
 import pygame
-from maze_adapter import CellType
+from ..maze_adapter import CellType
 
 
 class Styles(Enum):
@@ -57,7 +57,7 @@ class RenderMaze:
 
     @staticmethod
     def _load(style: Styles) -> pygame.Surface:
-        path = f"assets/{style.value}"
+        path = f"src/assets/{style.value}"
         return pygame.image.load(path)
 
     @staticmethod

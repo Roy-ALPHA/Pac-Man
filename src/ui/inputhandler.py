@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from entities import Direction
+from ..entities import Direction
 import pygame
 
 

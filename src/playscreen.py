@@ -1,9 +1,9 @@
-from ui.screen import Screen
-from ui.renderer import Renderer
-from ui.inputhandler import InputCommand
-from entities import Direction
-from config import Config
-from engine import GameEngine
+from .ui.screen import Screen
+from .ui.renderer import Renderer
+from .ui.inputhandler import InputCommand
+from .entities import Direction
+from .config import Config
+from .engine import GameEngine
 
 
 
