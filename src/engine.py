@@ -117,7 +117,7 @@ class GameEngine:
             )
         except AttributeError:
             self._pacman = entities.PacMan(
-                *center,
+                *self._grid.find_nearest_corridor(center),
                 self._config.pacman_speed,
                 self._grid,
                 self._config.lives,
@@ -167,7 +167,9 @@ class GameEngine:
                 if is_corner:
                     cell.add_consumable(consumables.SuperPacGum([
                         consumables.FrightenGhostsEffect(self._levelconfig.frightened_duration),
-                        consumables.ScoreEffect(self._config.points_per_super_pacgum)
+                        consumables.ScoreEffect(self._config.points_per_super_pacgum),
+                        consumables.SpeedBuffEffect(self._levelconfig.frightened_duration, [self._pacman]),
+                        consumables.SpeedDebuffEffect(self._levelconfig.frightened_duration, self._ghosts)
                         ]))
         self._is_game_over = False
         self._level_time = self._calculate_level_max_time()

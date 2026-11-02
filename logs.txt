@@ -1,5 +1,13 @@
+<<<<<<< Updated upstream
 [Config]Warning   ▸▸▸▸▸   Config file not found at '../config.json'. Fallback to default configuration.
 [Highscore]Info   ▸▸▸▸▸   Loaded 2 highscore entries from 'highscores.json'
+=======
+[Config]Warning   ▸▸▸▸▸   Invalid value for 'seed': got -42, expected >= 1. Using default: 42.
+[Config]Warning   ▸▸▸▸▸   Missing frightened_duration in config. Using default: 8.0.
+[Config]Warning   ▸▸▸▸▸   Invalid ghost_speed: 0.0. Using default: 3.0.
+[Config]Warning   ▸▸▸▸▸   Invalid pacman_speed: 0.0. Using default: 5.0.
+[Config]Info   ▸▸▸▸▸   Successfully loaded configuration from 'config.json'
+>>>>>>> Stashed changes
 [Engine]Info   ▸▸▸▸▸   Level 1 loaded with seed 42
 [Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
 [Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED

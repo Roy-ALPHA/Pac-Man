@@ -1,6 +1,6 @@
 {
-    "width": 45,
-    "height": 45,
+    "width": 7,
+    "height": 7,
     "lives": 300,
     "pacgum": 1,
     "points_per_pacgum": 10,
@@ -9,6 +9,9 @@
     "ghost_speed": 1.0,
     "pacman_speed": 10,
     "seed": -42,
-    "level_max_time": 100,
-    "highscore_filename": "highscores.json"
+<<<<<<< Updated upstream
+    "level_max_time": 100
+=======
+    "level_max_time": 90
+>>>>>>> Stashed changes
 }

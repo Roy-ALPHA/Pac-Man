@@ -9,6 +9,10 @@ class GhostState(Enum):
     WANDER = auto()
     DIED = auto()
 
+class Skill(Enum):
+    SPEED = auto()
+    INVINCIBILITY = auto()
+    FREEZ = auto()
 
 class Direction(Enum):
     UP = (0, -1)
@@ -49,7 +53,9 @@ class Entity(ABC):
         self._grid = grid
         self._cur_direction = Direction.NONE
         self._next_direction = Direction.NONE
+        self._base_speed = self._speed
         self._name = name
+        self._invincible = False
 
     @property
     def name(self):
@@ -62,6 +68,10 @@ class Entity(ABC):
     @property
     def next_direction(self):
         return self._next_direction
+
+    @property
+    def is_invincible(self):
+        return self._invincible
 
     @property
     def speed(self):
@@ -83,8 +93,32 @@ class Entity(ABC):
     def spawn(self):
         return self._spawn_x, self._spawn_y
 
-    def increase_speed(self):
-        self._speed += 2
+    def activate_effect(self, skill, buff=True):
+        match skill:
+            case Skill.SPEED:
+                if buff:
+                    self._speed = self._base_speed * 1.5
+                else:
+                    self._speed = self._base_speed * 0.5
+            case Skill.INVINCIBILITY:
+                self._invincible = buff
+            case Skill.FREEZ:
+                if buff:
+                    self._speed = self._base_speed
+                else:
+                    self._speed = 0
+
+    def desactivate_effect(self, skill):
+        match skill:
+            case (Skill.SPEED | Skill.FREEZ):
+                self._speed = self._base_speed
+            case Skill.INVINCIBILITY:
+                self._invincible = False
+
+    def reset_effects(self):
+        """Cleanly restore entity to normal base state."""
+        self._speed = self._base_speed
+        self._invincible = False
 
     @abstractmethod
     def respawn(self):
@@ -153,7 +187,6 @@ class PacMan(Entity):
     def __init__(self, spawn_x, spawn_y, speed, grid, lives, name):
         super().__init__(spawn_x, spawn_y, speed, grid, name)
         self._lives = lives
-        self._invincible = False
 
     @property
     def is_alive(self):
@@ -163,10 +196,6 @@ class PacMan(Entity):
     def lives(self):
         return self._lives
 
-    @property
-    def is_invincible(self):
-        return self._invincible
-
     def respawn(self):
         self._x, self._y = self._spawn_x, self._spawn_y
         self._cur_direction = Direction.NONE
@@ -174,9 +203,6 @@ class PacMan(Entity):
 
     def can_eat_ghost(self, ghost):
         return ghost == self and ghost.is_frighten
-
-    def toggle_invincibility(self):
-        self._invincible = not self._invincible
 
     def lose_life(self):
         if self.is_alive:
@@ -245,14 +271,6 @@ class Ghost(Entity):
     def switch_state(self, new_state):
         self._state = new_state
 
-    def freeze(self):
-        try:
-            self._speed = self._old_speed
-            del self._old_speed
-        except AttributeError:
-            self._old_speed = self._speed
-            self._speed = 0
-
     def can_eat_pacman(self):
         return self._pacman == self and not self._pacman.is_invincible and self.state in {GhostState.WANDER, GhostState.CHASE}
 
@@ -264,7 +282,6 @@ class Ghost(Entity):
     def update(self, dt):
         distance = self._speed * dt
 
-        dist = math.dist(self.tile, self._pacman.tile)
 
         match self._state:
             case GhostState.FRIGHTENED:
@@ -273,13 +290,9 @@ class Ghost(Entity):
                     self.switch_state(GhostState.CHASE)
             case GhostState.DIED if self.tile == (self._spawn_x, self._spawn_y):
                 self.switch_state(GhostState.CHASE)
-            # case GhostState.WANDER if dist <= 10000:
-            #     self.switch_state(GhostState.CHASE)
-            # case GhostState.CHASE if dist > 10:
-            #     self.switch_state(GhostState.WANDER)
+            case GhostState.DIED:
+                distance = (self._speed * dt) * 2
 
-        if self._state is GhostState.WANDER:
-            self._state = GhostState.CHASE
 
         if self._pacman.is_invincible and self._state not in {GhostState.WANDER, GhostState.FRIGHTENED}:
             self.switch_state(GhostState.WANDER)

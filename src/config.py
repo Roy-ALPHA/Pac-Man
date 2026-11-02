@@ -11,7 +11,6 @@ import random
 @dataclass(frozen=True)
 class LevelConfig:
     level: int
-    level_max_time: int
     frightened_duration: float
     ghost_speed: float
     seed: int
@@ -29,8 +28,6 @@ class Config:
     ghost_speed: float = 3.0
     pacman_speed: float = 5.0
     seed: int = 42
-    level_max_time: int = 90
-    # highscore_filename: str = Path("highscores.json")
 
     @classmethod
     def set_maze_size(cls, width, height):
@@ -134,9 +131,7 @@ class Config:
             "frightened_duration": 8.0,
             "ghost_speed": 3.0,
             "pacman_speed": 5.0,
-            "seed": 42,
-            "level_max_time": 90
-            # "highscore_filename": Path("highscores.json")
+            "seed": 42
         }
 
         def validate_int_field(key: str, min_val: int | None = None, max_val: int | None = None):
@@ -173,7 +168,6 @@ class Config:
         validate_int_field("points_per_super_pacgum", min_val=0)
         validate_int_field("points_per_ghost", min_val=0)
         validate_int_field("seed", min_val=1)
-        validate_int_field("level_max_time", min_val=20)
 
         if "frightened_duration" in data:
             match data["frightened_duration"]:
@@ -202,29 +196,12 @@ class Config:
         else:
             log(f"Missing pacman_speed in config. Using default: {clamped['pacman_speed']}.", "Config", LogType.WARNING)
 
-        # if "highscore_filename" not in data:
-        #     warn(
-        #         f"Missing 'highscore_filename' in config. Using default: '{clamped['highscore_filename']}'.",
-        #         category=PacmanConfigWarning,
-        #         stacklevel=2,
-        #     )
-        # else:
-        #     raw_path = data["highscore_filename"]
-        #     if not isinstance(raw_path, str):
-        #         warn(
-        #             f"Invalid 'highscore_filename': got {raw_path!r}, expected a string path. Using default: '{clamped['highscore_filename']}'.",
-        #             category=PacmanConfigWarning,
-        #             stacklevel=2,
-        #         )
-        #     else:
-        #         clamped["highscore_filename"] = Path(raw_path)
 
         return clamped
 
     def generate_level(self, level: int) -> LevelConfig:
         return LevelConfig(
             level=level,
-            level_max_time=max(45, self.level_max_time - (level - 1) * 3),
             frightened_duration=max(2.0, self.frightened_duration - (level - 1) * 0.5),
             ghost_speed=min(4.8, self.ghost_speed + (level - 1) * 0.1),
             seed=self.seed if level == 1 else random.randint(1, 1_000_000)

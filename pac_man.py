@@ -58,6 +58,12 @@ class PacmanApp:
 
 if __name__ == "__main__":
 
+<<<<<<< Updated upstream
     config = Config().from_file(Path("../config.json"))
     pac_man = PacmanApp(config, 1200, 800)
     pac_man.run()
+=======
+    config = Config().from_file(Path("config.json"))
+    test = PacmanApp(config, 1200, 800)
+    test.run()
+>>>>>>> Stashed changes

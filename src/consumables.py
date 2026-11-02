@@ -24,6 +24,24 @@ class FrightenGhostsEffect(Effect):
         engine.trigger_frightened_mode(self._duration)
 
 
+class SpeedDebuffEffect(Effect):
+    def __init__(self, duration, targets):
+        self._duration = duration
+        self._targets = targets
+
+    def apply(self, engine):
+        engine.increase_speed(self._duration, self._targets)
+
+
+class SpeedBuffEffect(Effect):
+    def __init__(self, duration, targets):
+        self._duration = duration
+        self._targets = targets
+
+    def apply(self, engine):
+        engine.decrease_speed(self._duration, self._targets)
+
+
 class Consumable(ABC):
 
     _counter = 0
