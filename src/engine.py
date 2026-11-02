@@ -89,7 +89,6 @@ class GameEngine:
 
     def _calculate_level_max_time(self):
         total_pellets = consumables.Consumable.pellets()
-        return 1000
         return (total_pellets / self._config.pacman_speed) * (3.0 * (self._levelconfig.ghost_speed / self._pacman.speed))
 
     def _load_level(self, seed=None):
