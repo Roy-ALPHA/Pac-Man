@@ -1,2 +1,3 @@
 [Config]Warning   ▸▸▸▸▸   Config file not found at '../config.json'. Fallback to default configuration.
+[Highscore]Warning   ▸▸▸▸▸   Invalid or missing file: '../highscores.json'. Fallback: starting with an empty leaderboard.
 [Engine]Info   ▸▸▸▸▸   Level 1 loaded with seed 42

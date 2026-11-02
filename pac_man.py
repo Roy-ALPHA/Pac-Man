@@ -34,6 +34,18 @@ class PacmanApp:
             elif command.play:
                 self.state_manager.change_state('play')
 
+            elif command.show_highscores:
+                self.state_manager.change_state('highscores')
+
+            elif command.back:
+                self.state_manager.change_state('main_menu')
+
+            elif command.show_highscores:
+                self.state_manager.change_state('highscores')
+
+            elif command.show_instructions:
+                self.state_manager.change_state('instructions')
+
             dt = clock.tick(60)
             self.state_manager.update(dt)
             self.state_manager.render(self.renderer)
@@ -47,5 +59,5 @@ class PacmanApp:
 if __name__ == "__main__":
 
     config = Config().from_file(Path("../config.json"))
-    test = PacmanApp(config, 1200, 800)
-    test.run()
+    pac_man = PacmanApp(config, 1200, 800)
+    pac_man.run()
