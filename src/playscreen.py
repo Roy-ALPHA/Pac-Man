@@ -9,7 +9,6 @@ import pygame
 
 
 class PlayEngine(GameEngine):
-    """GameEngine with public access to what the screen needs."""
 
     @property
     def is_level_loaded(self):
@@ -37,7 +36,7 @@ class PlayEngine(GameEngine):
 
     @property
     def max_level(self):
-        return 10  # same number the engine uses in is_game_won
+        return 10
 
     @property
     def time_left(self):
@@ -81,17 +80,14 @@ class PlayScreen(Screen):
         self._overlay = pygame.Surface((self.screen_w, self.screen_h))
         self._overlay.set_alpha(150)
 
-        self._save_rect = self._make_rect(300, 70, 130)     # game over
-        self._resume_rect = self._make_rect(500, 80, 0)     # pause menu
+        self._save_rect = self._make_rect(300, 70, 130)
+        self._resume_rect = self._make_rect(500, 80, 0)
         self._save_game_rect = self._make_rect(500, 80, 100)
         self._menu_rect = self._make_rect(500, 80, 200)
 
-        # a loaded game starts paused so the player can get ready
         self.loaded = load and self._engine.load()
         if self.loaded:
             self._paused = self._engine.state is EngineState.STOPPED
-
-    # ---------- input ----------
 
     def handle_input(self, command: InputCommand) -> None:
 
@@ -131,11 +127,11 @@ class PlayScreen(Screen):
             saved = self.save_game()
             self._message = "Game saved" if saved else "Could not save the game"
         elif clicked == "Main Menu":
-            command.back = True  # GameStateManager saves, then opens the menu
+            command.back = True
 
     def _handle_end(self, command: InputCommand, clicked: str | None) -> None:
 
-        command.back = False  # nothing leaves this screen except Save
+        command.back = False
 
         self._name += command.text
         if command.backspace:
@@ -147,13 +143,10 @@ class PlayScreen(Screen):
             if saved:
                 command.show_highscores = True
             else:
-                self._message = message  # the reason comes from HighscoreManager
-
-    # ---------- update ----------
+                self._message = message
 
     def update(self, dt: int) -> None:
 
-        # a finished game cannot be resumed, so delete its save once
         if self._game_ended() and not self._save_cleared:
             self._engine.delete_save()
             self._save_cleared = True
@@ -161,7 +154,7 @@ class PlayScreen(Screen):
         if Screen.door_w >= 0:
             Screen.door_w -= 1100 * (dt / 1000)
 
-        self._engine.tick(dt / 1000, self._direction)  # does nothing if paused
+        self._engine.tick(dt / 1000, self._direction)
         self._update_cursor()
 
     def _update_cursor(self) -> None:
@@ -172,16 +165,11 @@ class PlayScreen(Screen):
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND if on_button
                                 else pygame.SYSTEM_CURSOR_ARROW)
 
-    # ---------- saving and pausing ----------
-
     def save_game(self) -> bool:
-        """Save the game. Returns True if it worked."""
 
         if self._game_ended() or not self._engine.is_level_loaded:
             return False
 
-        # a paused engine is STOPPED, so resume it just for the save,
-        # otherwise the file would say "STOPPED"
         if self._paused:
             self._engine.resume()
 
@@ -207,8 +195,6 @@ class PlayScreen(Screen):
         return self._engine.state in (EngineState.GAME_OVER,
                                       EngineState.GAME_WON)
 
-    # ---------- buttons ----------
-
     def _make_rect(self, w: int, h: int, y_offset: int) -> pygame.Rect:
 
         rect = pygame.Rect(0, 0, w, h)
@@ -216,7 +202,6 @@ class PlayScreen(Screen):
         return rect
 
     def _buttons(self) -> dict[str, pygame.Rect]:
-        """The buttons visible right now (text -> rectangle)."""
 
         if self._game_ended():
             return {"Save": self._save_rect}
@@ -239,8 +224,6 @@ class PlayScreen(Screen):
                 return text
 
         return None
-
-    # ---------- drawing ----------
 
     def render(self, render: Renderer) -> None:
 
@@ -327,7 +310,6 @@ class PlayScreen(Screen):
                               self.screen_h - 40 - i * 30), center=False)
 
     def _cheat_lines(self) -> list[str]:
-        """What to show in the bottom right corner."""
 
         lines = []
 
