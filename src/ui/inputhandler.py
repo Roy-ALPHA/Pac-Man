@@ -2,6 +2,9 @@ from dataclasses import dataclass
 from ..entities import Direction
 import pygame
 
+CHEAT_KEYS = {pygame.K_1: 1, pygame.K_2: 2, pygame.K_3: 3,
+              pygame.K_4: 4, pygame.K_5: 5}
+
 
 @dataclass
 class InputCommand:
@@ -14,9 +17,11 @@ class InputCommand:
     back: bool = False
     quit: bool = False
     show_highscores: bool = False
+    show_instructions: bool = False
     text: str = ""
     backspace: bool = False
-    show_instructions: bool = False
+    cheat: int = 0
+    toggle_cheats: bool = False
 
 
 class InputHandler:
@@ -52,6 +57,12 @@ class InputHandler:
 
                 elif event.key == pygame.K_BACKSPACE:
                     command.backspace = True
+
+                elif event.key == pygame.K_F1:
+                    command.toggle_cheats = True
+
+                elif event.key in CHEAT_KEYS:
+                    command.cheat = CHEAT_KEYS[event.key]
 
                 if event.unicode.isprintable():
                     command.text += event.unicode

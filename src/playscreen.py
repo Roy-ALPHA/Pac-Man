@@ -3,7 +3,7 @@ from src.ui.renderer import Renderer
 from src.ui.inputhandler import InputCommand
 from .entities import Direction
 from .config import Config
-from .engine import GameEngine, EngineState
+from .engine import GameEngine, EngineState, Cheat
 from .highscore import HighscoreManager
 import pygame
 
@@ -45,13 +45,19 @@ class PlayEngine(GameEngine):
 
 class PlayScreen(Screen):
 
+    CHEATS = {1: Cheat.INVINCIBILITY, 2: Cheat.EXTRA_LIVES,
+              3: Cheat.GHOST_FREEZE, 4: Cheat.INCREASE_SPEED,
+              5: Cheat.LEVEL_SKIP}
+
     def __init__(self, config: Config, highscores: HighscoreManager) -> None:
 
         self._engine = PlayEngine(config)
+        self._config = config
         self._highscores = highscores
         self._direction = Direction.NONE
         self._change_style = False
         self._paused = False
+        self._cheats_on = False
         self._name = ""
         self._message = ""
         self._title_font = pygame.font.Font(None, 110)
@@ -85,6 +91,12 @@ class PlayScreen(Screen):
 
         if command.change_style:
             self._change_style = True
+        
+        if command.toggle_cheats:
+            self._cheats_on = not self._cheats_on
+
+        if command.cheat and self._cheats_on and self._engine.is_level_loaded:
+            self._engine.activate_cheat(self.CHEATS[command.cheat])
 
         if command.direction is not Direction.NONE:
             self._direction = command.direction
@@ -102,6 +114,31 @@ class PlayScreen(Screen):
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND if on_button
                                 else pygame.SYSTEM_CURSOR_ARROW)
 
+    def _draw_cheat_status(self, render: Renderer) -> None:
+
+        lines = []
+
+        if self._cheats_on:
+            lines.append("CHEATS ON")
+
+        if self._engine.is_level_loaded:
+            pacman = self._engine.pacman
+
+            if pacman.is_invincible:
+                lines.append("INVINCIBLE")
+            if pacman.speed > self._config.pacman_speed:
+                bonus = pacman.speed - self._config.pacman_speed
+                lines.append(f"SPEED +{bonus:g}")
+            if pacman.lives > self._config.lives:
+                lines.append(f"EXTRA LIVES +{pacman.lives - self._config.lives}")
+            if any(g.is_frozen for g in self._engine.ghosts):
+                lines.append("GHOSTS FROZEN")
+
+        for i, text in enumerate(lines):
+            render.blit_window(
+                self._small_font.render(text, True, 'red'),
+                (self.screen_w - 190, self.screen_h - 40 - i * 30))
+    
     def render(self, render: Renderer) -> None:
 
         render.clear()
@@ -120,6 +157,7 @@ class PlayScreen(Screen):
         elif self._paused:
             self._draw_pause_menu(render)
 
+        self._draw_cheat_status(render)
         render.draw_door(0, Screen.door_w)
         render.draw_door(Screen.screen_w - Screen.door_w, Screen.door_w)
 

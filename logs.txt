@@ -1,3 +1,51 @@
 [Config]Warning   ▸▸▸▸▸   Config file not found at '../config.json'. Fallback to default configuration.
-[Highscore]Warning   ▸▸▸▸▸   Invalid or missing file: '../highscores.json'. Fallback: starting with an empty leaderboard.
+[Highscore]Info   ▸▸▸▸▸   Loaded 2 highscore entries from 'highscores.json'
 [Engine]Info   ▸▸▸▸▸   Level 1 loaded with seed 42
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: INCREASE_SPEED
+[Engine]Info   ▸▸▸▸▸   Cheat activated: GHOST_FREEZE
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: EXTRA_LIVES
+[Engine]Info   ▸▸▸▸▸   Cheat activated: LEVEL_SKIP
+[Engine]Info   ▸▸▸▸▸   Level 2 loaded with seed 246206
+[Engine]Info   ▸▸▸▸▸   Cheat activated: LEVEL_SKIP
+[Engine]Info   ▸▸▸▸▸   Level 3 loaded with seed 214159

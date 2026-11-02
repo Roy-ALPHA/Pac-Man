@@ -27,7 +27,8 @@ class RenderPlayer:
             sheet, (self._frames * self._tile, 4 * self._tile))
 
     def render(self, player) -> None:
-        if self._sheet is None:
+
+        if player.is_invincible and (pygame.time.get_ticks() // 150) % 2:
             return
 
         direction = player.cur_direction

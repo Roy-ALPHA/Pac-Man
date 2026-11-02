@@ -21,6 +21,10 @@ class InstructionsScreen(Screen):
         ("Big dots in the corners make the ghosts scared.", 'white'),
         ("Eat a scared ghost to get extra points.", 'white'),
         ("", 'None'),
+        ("CHEATS", 'yellow'),
+        ("1: invincible on/off    2: extra life    3: freeze ghosts on/off", 'white'),
+        ("4: faster Pac-Man    5: skip the level", 'white'),
+        ("", 'white'),
         ("GAME OVER", 'yellow'),
         ("You lose when you have no lives left.", 'white'),
         ("You also lose when the level time is up.", 'white'),
@@ -30,8 +34,8 @@ class InstructionsScreen(Screen):
     ]
 
     def __init__(self) -> None:
-        self._title_font = pygame.font.Font(None, 90)
-        self._font = pygame.font.Font(None, 36)
+        self._title_font = pygame.font.Font(None, 70)
+        self._font = pygame.font.Font(None, 30)
 
     def handle_input(self, command: InputCommand) -> None:
         if command.mouse_clicked:
@@ -44,9 +48,9 @@ class InstructionsScreen(Screen):
         render.clear()
 
         self._draw_centered(render, self._title_font, "HOW TO PLAY",
-                            60, 'yellow')
+                            40, 'yellow')
 
-        y = 140
+        y = 100
         for text, color in self.LINES:
             if text:
                 self._draw_centered(render, self._font, text, y, color)

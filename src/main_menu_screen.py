@@ -52,7 +52,7 @@ class MainMenuScreen(Screen):
     def render(self, render: Renderer) -> None:
 
         render.clear()
-
+        
         render.draw_door(0, Screen.door_w)
         render.draw_door(Screen.screen_w - Screen.door_w, Screen.door_w)
 
