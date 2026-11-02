@@ -10,7 +10,7 @@ CHEAT_KEYS = {pygame.K_1: 1, pygame.K_2: 2, pygame.K_3: 3,
 class InputCommand:
 
     direction: Direction = Direction.NONE
-    change_style = False
+    change_style: bool = False
     mouse_clicked: bool = False
     play: bool = False
     pause: bool = False
@@ -22,6 +22,7 @@ class InputCommand:
     backspace: bool = False
     cheat: int = 0
     toggle_cheats: bool = False
+    continue_game: bool = False
 
 
 class InputHandler:
@@ -49,7 +50,7 @@ class InputHandler:
                 elif event.key in (pygame.K_LEFT, pygame.K_a):
                     command.direction = Direction.LEFT
 
-                elif event.key is pygame.K_c:
+                elif event.key == pygame.K_c:
                     command.change_style = True
 
                 elif event.key in (pygame.K_SPACE, pygame.K_p):
