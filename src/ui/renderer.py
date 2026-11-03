@@ -38,6 +38,16 @@ class Renderer:
         self._maze_renderer.render(change_style)
         self._consumables_renderer.render(maze, change_style)
 
+    def draw_text(self, font: pygame.font.Font, text: str, color: str,
+                  pos: tuple[int, int], center: bool = True) -> None:
+
+        if not text:
+            return
+
+        image = font.render(text, True, color)
+        rect = (image.get_rect(center=pos) if center
+                else image.get_rect(topleft=pos))
+        self._screen.blit(image, rect)
     def render_entities(self, player, ghosts) -> None:
         self._player_renderer.render(player)
         self._ghost_renderer.render(ghosts)

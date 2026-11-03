@@ -13,7 +13,6 @@ class HighscoreScreen(Screen):
         self._font = pygame.font.Font(None, 50)
 
     def handle_input(self, command: InputCommand) -> None:
-
         if command.mouse_clicked:
             command.back = True
 
@@ -21,28 +20,22 @@ class HighscoreScreen(Screen):
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
 
     def render(self, render: Renderer) -> None:
-        render.clear()
 
-        self._draw_text(render, self._title_font, "HIGH SCORES",
-                        self.middle_w - 200, 60, 'yellow')
+        mid = self.middle_w
+
+        render.clear()
+        render.draw_text(self._title_font, "HIGH SCORES", 'yellow', (mid, 80))
 
         scores = self._highscores.get_top_scores(10)
-
-        if not scores:
-            self._draw_text(render, self._font, "No scores yet",
-                            self.middle_w - 100, 300, 'white')
+        render.draw_text(self._font, "" if scores else "No scores yet",
+                         'white', (mid, 300))
 
         for rank, (name, score) in enumerate(scores, start=1):
             y = 180 + (rank - 1) * 50
-            self._draw_text(render, self._font, f"{rank}. {name}",
-                            self.middle_w - 250, y, 'white')
-            self._draw_text(render, self._font, str(score),
-                            self.middle_w + 150, y, 'yellow')
+            render.draw_text(self._font, f"{rank}. {name}", 'white',
+                             (mid - 250, y), center=False)
+            render.draw_text(self._font, str(score), 'yellow',
+                             (mid + 150, y), center=False)
 
-        self._draw_text(render, self._font, "Click the mouse anywhere to go back",
-                        self.middle_w - 230, self.screen_h - 70, 'gray')
-
-    def _draw_text(self, render: Renderer, font: pygame.font.Font,
-                   text: str, x: int, y: int, color: str) -> None:
-        image = font.render(text, True, color)
-        render.blit_window(image, (x, y))
+        render.draw_text(self._font, "Click anywhere to go back", 'gray',
+                         (mid, self.screen_h - 50))

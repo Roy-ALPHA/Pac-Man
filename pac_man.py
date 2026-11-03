@@ -9,6 +9,10 @@ import pygame
 
 class PacmanApp:
 
+    SCREENS = {'play': 'play', 'continue_game': 'continue',
+               'show_highscores': 'highscores',
+               'show_instructions': 'instructions', 'back': 'main_menu'}
+
     def __init__(self, config, w: int, h: int) -> None:
 
         self.is_running: bool = True
@@ -29,22 +33,13 @@ class PacmanApp:
             self.state_manager.handle_input(command)
 
             if command.quit:
+                self.state_manager.save_game()
                 return self.quit()
 
-            elif command.play:
-                self.state_manager.change_state('play')
-
-            elif command.show_highscores:
-                self.state_manager.change_state('highscores')
-
-            elif command.back:
-                self.state_manager.change_state('main_menu')
-
-            elif command.show_highscores:
-                self.state_manager.change_state('highscores')
-
-            elif command.show_instructions:
-                self.state_manager.change_state('instructions')
+            for flag, screen in self.SCREENS.items():
+                if getattr(command, flag):
+                    self.state_manager.change_state(screen)
+                    break
 
             dt = clock.tick(60)
             self.state_manager.update(dt)

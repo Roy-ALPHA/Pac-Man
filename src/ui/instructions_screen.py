@@ -6,31 +6,31 @@ import pygame
 
 class InstructionsScreen(Screen):
 
+    # ALL CAPITALS = heading (yellow). Empty text = blank line.
     LINES = [
-        ("GOAL", 'yellow'),
-        ("Eat all the dots in the maze to finish the level.", 'white'),
-        ("Finish all the levels to win the game.", 'white'),
-        ("", 'None'),
-        ("CONTROLS", 'yellow'),
-        ("Arrow keys or WASD: move Pac-Man", 'white'),
-        ("P or Space: pause the game", 'white'),
-        ("C: change the maze style", 'white'),
-        ("", 'None'),
-        ("GHOSTS", 'yellow'),
-        ("Touching a ghost costs you one life.", 'white'),
-        ("Big dots in the corners make the ghosts scared.", 'white'),
-        ("Eat a scared ghost to get extra points.", 'white'),
-        ("", 'None'),
-        ("CHEATS", 'yellow'),
-        ("1: invincible on/off    2: extra life    3: freeze ghosts on/off", 'white'),
-        ("4: faster Pac-Man    5: skip the level", 'white'),
-        ("", 'white'),
-        ("GAME OVER", 'yellow'),
-        ("You lose when you have no lives left.", 'white'),
-        ("You also lose when the level time is up.", 'white'),
-        ("", 'None'),
-        ("At the end, type your name and click Save to join the highscores.",
-         'white'),
+        "GOAL",
+        "Eat all the dots in the maze to finish the level.",
+        "Finish all the levels to win the game.",
+        "",
+        "CONTROLS",
+        "Arrow keys or WASD: move Pac-Man",
+        "P or Space: pause the game (you can save there)",
+        "C: change the maze style",
+        "",
+        "GHOSTS",
+        "Touching a ghost costs you one life.",
+        "Big dots in the corners make the ghosts scared.",
+        "Eat a scared ghost to get extra points.",
+        "",
+        "CHEATS",
+        "F1: cheats on/off, then press a number key",
+        "1: invincible    2: extra life    3: freeze ghosts",
+        "4: faster Pac-Man    5: skip the level",
+        "",
+        "GAME OVER",
+        "You lose when you have no lives left.",
+        "You also lose when the level time is up.",
+        "Type your name and click Save to join the highscores.",
     ]
 
     def __init__(self) -> None:
@@ -45,22 +45,15 @@ class InstructionsScreen(Screen):
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
 
     def render(self, render: Renderer) -> None:
+
         render.clear()
+        render.draw_text(self._title_font, "HOW TO PLAY", 'yellow',
+                         (self.middle_w, 40))
 
-        self._draw_centered(render, self._title_font, "HOW TO PLAY",
-                            40, 'yellow')
+        for i, text in enumerate(self.LINES):
+            color = 'yellow' if text.isupper() else 'white'
+            render.draw_text(self._font, text, color,
+                             (self.middle_w, 90 + i * 27))
 
-        y = 100
-        for text, color in self.LINES:
-            if text:
-                self._draw_centered(render, self._font, text, y, color)
-            y += 30
-
-        self._draw_centered(render, self._font, "Click anywhere to go back",
-                            self.screen_h - 30, 'gray')
-
-    def _draw_centered(self, render: Renderer, font: pygame.font.Font,
-                       text: str, y: int, color: str) -> None:
-        image = font.render(text, True, color)
-        render.blit_window(image, image.get_rect(
-            center=(self.middle_w, y)).topleft)
+        render.draw_text(self._font, "Click anywhere to go back", 'gray',
+                         (self.middle_w, self.screen_h - 25))
