@@ -239,6 +239,7 @@ class PacMan(Entity):
 		self._x, self._y = self._spawn_x, self._spawn_y
 		self._cur_direction = Direction.NONE
 		self._next_direction = Direction.NONE
+		self.remove_all_effects()
 
 	def can_eat_ghost(self, ghost):
 		return ghost == self and ghost.is_frighten
@@ -317,8 +318,8 @@ class Ghost(Entity):
 		self._cur_direction = Direction.NONE
 		self._next_direction = Direction.NONE
 		self._state = GhostState.CHASE
-		if self.is_frozen:
-			self.freeze()
+		self.remove_all_effects()
+		
 
 	def _request_direction(self, blinky=None):
 		if self._next_direction is Direction.NONE or self._target_tile is None or self._target_tile == self.tile or self._grid.is_wall(*self._target_tile):

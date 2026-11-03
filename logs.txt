@@ -1,7 +1,0 @@
-[Config]Warning   ▸▸▸▸▸   Invalid value for 'seed': got -42, expected >= 1. Using default: 42.
-[Config]Warning   ▸▸▸▸▸   Missing frightened_duration in config. Using default: 8.0.
-[Config]Info   ▸▸▸▸▸   Successfully loaded configuration from 'config.json'
-[Highscore]Info   ▸▸▸▸▸   Loaded 4 highscore entries from 'highscores.json'
-[Engine]Info   ▸▸▸▸▸   Level 1 loaded with seed 42
-[Engine]Info   ▸▸▸▸▸   Level 1 loaded with seed 42
-[Engine]Info   ▸▸▸▸▸   Engine state restored (Level 1, Score 660)
