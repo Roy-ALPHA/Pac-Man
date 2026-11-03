@@ -3,13 +3,11 @@ from . import ghost_ai
 from . import consumables
 from enum import Enum, auto
 from .maze_adapter import MazeAdapter
-import os
-from pathlib import Path
-import sys
 import json
 from dataclasses import asdict, replace
 from .config import Config
 from .logs import log, LogType
+from .data_dir import DATA_DIR
 
 
 class EngineState(Enum):
@@ -37,21 +35,6 @@ class GameEngine:
         self._cur_level = 1
         self._state = EngineState.RESPAWNING
         self._is_level_loaded = False
-        self._data_dir = self._get_save_path()
-
-    @staticmethod
-    def _calc_spawn(grid, def_spawn_coor):
-        def_x, def_y = def_spawn_coor
-
-        if not grid.is_wall(def_x, def_y):
-            return def_x, def_y
-
-        for direction in entities.PRIORITY_DIRECTIONS:
-            x = def_x + direction.dx
-            y = def_y + direction.dy
-
-            if not grid.is_wall(x, y):
-                return x, y
 
     @property
     def state(self):
@@ -89,7 +72,7 @@ class GameEngine:
 
     def _calculate_level_max_time(self):
         total_pellets = consumables.Consumable.pellets()
-        return (total_pellets / self._config.pacman_speed) * (3.0 * (self._levelconfig.ghost_speed / self._pacman.speed))
+        return max((total_pellets / self._config.pacman_speed) * (3.0 * (self._levelconfig.ghost_speed / self._pacman.speed)), 20)
 
     def _load_level(self, seed=None):
         consumables.Consumable.reset_counter()
@@ -229,6 +212,24 @@ class GameEngine:
         for ghost in self._ghosts:
             ghost.active_frighten_mode(duration)
 
+    def apply_effect(self, effect: entities.EntityEffect, duration=None, targets=None):
+        target_entities = []
+        if targets == "pacman" or targets is None or targets is self._pacman:
+            target_entities.append(self._pacman)
+        elif targets == "ghosts" or targets is self._ghosts:
+            target_entities.extend(self._ghosts)
+        elif isinstance(targets, list):
+            target_entities.extend(targets)
+
+        for entity in target_entities:
+            entity.activate_effect(effect, duration=duration)
+
+    def increase_speed(self, duration, targets="pacman"):
+        self.apply_effect(entities.EntityEffect.SPEED_BUFF, duration=duration, targets=targets)
+
+    def decrease_speed(self, duration, targets="pacman"):
+        self.apply_effect(entities.EntityEffect.SPEED_DEBUFF, duration=duration, targets=targets)
+
     def _level_timer(self, dt):
         if self.is_game_over or self.is_game_won or self.is_level_completed:
             return
@@ -272,7 +273,8 @@ class GameEngine:
                             "_state": ghost.state.name,                                                                                                                                                 
                             "_target_tile": ghost.target_tile if ghost.target_tile else None,                                                                                                     
                             "_frightened_time": getattr(ghost, "_frightened_time", 0.0),                                                                                                                
-                        }                                                                                                                                                                               
+                            "_effects": ghost.get_effects_state(),
+                        }                                                                                                                                                                    
                                                                                                                                                                                                         
                     states["pacman"] = {                                                                                                                                                                
                         "_spawn_x": self._pacman.spawn[0],                                                                                                                                              
@@ -284,6 +286,7 @@ class GameEngine:
                         "_cur_direction": self._pacman.cur_direction.name,                                                                                                                              
                         "_next_direction": self._pacman.next_direction.name,                                                                                                                            
                         "_invincible": self._pacman.is_invincible,                                                                                                                                
+                        "_effects": self._pacman.get_effects_state(),
                     }
                                                                                                                                                                                                         
                     for row in self._grid.grid:                                                                                                                                                         
@@ -291,8 +294,8 @@ class GameEngine:
                             if not cell.is_wall and not cell.consumes:                                                                                                                                  
                                 states["maze_eaten"].append((cell.x, cell.y))                                                                                                                           
                                                                                                                                                                                                         
-                states_file = self._data_dir / "pacman_states.json"
-                self._data_dir.mkdir(parents=True, exist_ok=True)
+                states_file = DATA_DIR / "pacman_states.json"
+                DATA_DIR.mkdir(parents=True, exist_ok=True)
                 states_file.write_text(json.dumps(states, indent=2), encoding="utf-8")
                 log(f"Engine state saved to '{states_file.name}'", "Engine", LogType.INFO)
                 return True
@@ -303,7 +306,7 @@ class GameEngine:
 
     def _load_states(self) -> bool:
         """Safely deserialize engine state and session config from disk."""
-        states_file = self._data_dir / "pacman_states.json"
+        states_file = DATA_DIR / "pacman_states.json"
 
         if not states_file.is_file():
             log(f"Save file not found at {states_file}", "Engine", LogType.WARNING)
@@ -372,6 +375,8 @@ class GameEngine:
                         "_frightened_time": saved_gt_state.get("_frightened_time", 0.0),
                     }
                     ghost.update_fields(new_states)
+                    if "_effects" in saved_gt_state:
+                        ghost.set_effects_state(saved_gt_state["_effects"])
 
             # load pacman states
             pacman_data = states.get("pacman", {})
@@ -394,6 +399,10 @@ class GameEngine:
                     "_invincible": pacman_data.get("_invincible", False),
                 }
                 self._pacman.update_fields(new_states)
+                if "_effects" in pacman_data:
+                    self._pacman.set_effects_state(pacman_data["_effects"])
+                elif pacman_data.get("_invincible", False):
+                    self._pacman.activate_effect(entities.EntityEffect.INVINCIBILITY)
 
             # load maze states
             for x, y in states.get("maze_eaten", []):
@@ -410,38 +419,6 @@ class GameEngine:
         except (json.JSONDecodeError, KeyError, OSError, ValueError) as err:
             log(f"Failed to load state ({err})", "Engine", LogType.WARNING)
             return False
-
-    @staticmethod
-    def _get_save_path(app_name: str = "pacman") -> Path:
-        if sys.platform == "win32":
-            # 1. Windows: %LOCALAPPDATA% or %APPDATA%
-            base_dir = os.getenv("LOCALAPPDATA") or os.getenv("APPDATA")
-            if base_dir:
-                data_dir = Path(base_dir) / app_name
-            else:
-                data_dir = Path.home() / "AppData" / "Local" / app_name
-
-        elif sys.platform == "darwin":
-            # 2. macOS: ~/Library/Application Support/<app_name>
-            data_dir = Path.home() / "Library" / "Application Support" / app_name
-
-        else:
-            # 3. Linux & POSIX (XDG Base Directory Spec)
-            xdg_data = os.getenv("XDG_DATA_HOME")
-            if xdg_data:
-                data_dir = Path(xdg_data) / app_name
-            else:
-                home = os.getenv("HOME")
-                base = (
-                    Path(home) / ".local" / "share"
-                    if home
-                    else Path.home() / ".local" / "share"
-                )
-            data_dir = base / app_name
-
-        # Create directories if they don't exist yet
-        data_dir.mkdir(parents=True, exist_ok=True)
-        return data_dir
 
     def tick(self, dt, pacman_direction):
         match self._state:

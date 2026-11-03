@@ -30,7 +30,7 @@ class SpeedDebuffEffect(Effect):
         self._targets = targets
 
     def apply(self, engine):
-        engine.increase_speed(self._duration, self._targets)
+        engine.decrease_speed(self._duration, self._targets)
 
 
 class SpeedBuffEffect(Effect):
@@ -39,7 +39,7 @@ class SpeedBuffEffect(Effect):
         self._targets = targets
 
     def apply(self, engine):
-        engine.decrease_speed(self._duration, self._targets)
+        engine.increase_speed(self._duration, self._targets)
 
 
 class Consumable(ABC):
