@@ -1,17 +1,12 @@
 {
-    "width": 7,
-    "height": 7,
+    "width": 15,
+    "height": 15,
     "lives": 300,
     "pacgum": 1,
     "points_per_pacgum": 10,
     "points_per_super_pacgum": 50,
     "points_per_ghost": 200,
-    "ghost_speed": 1.0,
-    "pacman_speed": 10,
-    "seed": -42,
-<<<<<<< Updated upstream
-    "level_max_time": 100
-=======
-    "level_max_time": 90
->>>>>>> Stashed changes
+    "ghost_speed": 3.0,
+    "pacman_speed": 5,
+    "seed": -42
 }

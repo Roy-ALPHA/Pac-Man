@@ -4,6 +4,13 @@ from rich.console import Group
 from colorama import Fore, Style
 from enum import Enum, auto
 import threading
+from pathlib import Path
+
+try:
+    from .data_dir import DATA_DIR
+except ImportError:
+    from data_dir import DATA_DIR
+
 
 class LogType(Enum):
     WARNING = auto()
@@ -32,8 +39,13 @@ class WarningManager:
         self._stop_event = threading.Event()
         self._worker = threading.Thread(target=self._warn)
         self._tables = dict()
-        self._logs_file = open("logs.txt", "w")
+        self._log_path = DATA_DIR / "logs.txt"
+        self._logs_file = open(self._log_path, "w", encoding="utf-8")
         WarningManager._gen_box(100)
+
+    @property
+    def log_path(self) -> Path:
+        return self._log_path
 
     @classmethod
     def _gen_box(cls, width):
