@@ -14,7 +14,7 @@ class GameStateManager:
     def __init__(self, config) -> None:
 
         self._config = config
-        self._highscores = HighscoreManager(Path("../highscores.json"))
+        self._highscores = HighscoreManager(Path("highscores.json"))
         self._active_screen: Screen | None = None
         self._screens: dict[str, Screen] = {
             'main_menu': MainMenuScreen(),
