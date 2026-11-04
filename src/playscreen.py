@@ -5,6 +5,7 @@ from .entities import Direction
 from .config import Config
 from .engine import GameEngine, EngineState, Cheat
 from .highscore import HighscoreManager
+from .data_dir import DATA_DIR
 import pygame
 
 
@@ -49,14 +50,18 @@ class PlayEngine(GameEngine):
         return self._load_states()
 
     def delete_save(self):
-        (self._data_dir / "pacman_states.json").unlink(missing_ok=True)
+        (DATA_DIR / "pacman_states.json").unlink(missing_ok=True)
 
 
 class PlayScreen(Screen):
 
-    CHEATS = {1: Cheat.INVINCIBILITY, 2: Cheat.EXTRA_LIVES,
-              3: Cheat.GHOST_FREEZE, 4: Cheat.INCREASE_SPEED,
-              5: Cheat.LEVEL_SKIP}
+    PAUSE_BUTTON = "Pause (P)"
+    CHEATS_BUTTON = "Cheats (F1)"
+    CHEATS = {"1 Invincible": Cheat.INVINCIBILITY,
+              "2 Extra life": Cheat.EXTRA_LIVES,
+              "3 Freeze ghosts": Cheat.GHOST_FREEZE,
+              "4 Speed up": Cheat.INCREASE_SPEED,
+              "5 Skip level": Cheat.LEVEL_SKIP}
 
     def __init__(self, config: Config, highscores: HighscoreManager,
                  load: bool = False) -> None:
@@ -68,6 +73,7 @@ class PlayScreen(Screen):
         self._direction = Direction.NONE
         self._change_style = False
         self._paused = False
+        self._asking = False
         self._cheats_on = False
         self._save_cleared = False
         self._name = ""
@@ -76,26 +82,50 @@ class PlayScreen(Screen):
         self._title_font = pygame.font.Font(None, 110)
         self._font = pygame.font.Font(None, 60)
         self._small_font = pygame.font.Font(None, 30)
+        self._hub_font = pygame.font.Font(None, 26)
 
         self._overlay = pygame.Surface((self.screen_w, self.screen_h))
         self._overlay.set_alpha(150)
+
+        self._panel = pygame.Surface((800, 300))
+        self._panel.fill((10, 10, 50))
 
         self._save_rect = self._make_rect(300, 70, 130)
         self._resume_rect = self._make_rect(500, 80, 0)
         self._save_game_rect = self._make_rect(500, 80, 100)
         self._menu_rect = self._make_rect(500, 80, 200)
+        self._yes_rect = self._make_rect(220, 80, 40, -150)
+        self._no_rect = self._make_rect(220, 80, 40, 150)
+        x = self.screen_w - Renderer.HUD_WIDTH + 20
+        self._pause_rect = pygame.Rect(x, 430, 160, 40)
+        self._cheats_rect = pygame.Rect(x, 480, 160, 40)
+        self._cheat_rects = {}
+        for i, name in enumerate(self.CHEATS):
+            self._cheat_rects[name] = pygame.Rect(x, 540 + i * 45, 160, 38)
 
         self.loaded = load and self._engine.load()
+
+        self._owns_save = self.loaded
+
         if self.loaded:
             self._paused = self._engine.state is EngineState.STOPPED
-
     def handle_input(self, command: InputCommand) -> None:
 
         clicked = self._clicked_button(command)
+        if command.quit and self._game_in_progress():
+            command.quit = False
+            self._start_question()
+
+        if self._asking:
+            self._handle_question(command, clicked)
+            return
 
         if self._game_ended():
             self._handle_end(command, clicked)
             return
+
+        if clicked == self.PAUSE_BUTTON:
+            command.pause = True
 
         if command.pause:
             self._toggle_pause()
@@ -103,18 +133,24 @@ class PlayScreen(Screen):
         if self._paused:
             self._handle_pause(command, clicked)
         else:
-            self._handle_play(command)
+            self._handle_play(command, clicked)
 
-    def _handle_play(self, command: InputCommand) -> None:
+    def _handle_play(self, command: InputCommand, clicked: str | None) -> None:
 
         if command.change_style:
             self._change_style = True
 
-        if command.toggle_cheats:
+        if command.toggle_cheats or clicked == self.CHEATS_BUTTON:
             self._cheats_on = not self._cheats_on
 
-        if command.cheat and self._cheats_on and self._engine.is_level_loaded:
-            self._engine.activate_cheat(self.CHEATS[command.cheat])
+        cheat = None
+        if command.cheat:
+            cheat = list(self.CHEATS.values())[command.cheat - 1]
+        elif clicked in self.CHEATS:
+            cheat = self.CHEATS[clicked]
+
+        if cheat and self._cheats_on and self._engine.is_level_loaded:
+            self._engine.activate_cheat(cheat)
 
         if command.direction is not Direction.NONE:
             self._direction = command.direction
@@ -129,11 +165,25 @@ class PlayScreen(Screen):
         elif clicked == "Main Menu":
             command.back = True
 
+    def _handle_question(self, command: InputCommand,
+                         clicked: str | None) -> None:
+
+        if clicked == "Yes":
+            if self.save_game():
+                command.quit = True
+            else:
+                self._message = "Could not save the game"
+        elif clicked == "No":
+            command.quit = True
+
     def _handle_end(self, command: InputCommand, clicked: str | None) -> None:
 
         command.back = False
+        for letter in command.text:
+            allowed = letter.isascii() and (letter.isalnum() or letter == " ")
+            if allowed and len(self._name) < 10:
+                self._name += letter
 
-        self._name += command.text
         if command.backspace:
             self._name = self._name[:-1]
 
@@ -144,11 +194,11 @@ class PlayScreen(Screen):
                 command.show_highscores = True
             else:
                 self._message = message
-
     def update(self, dt: int) -> None:
 
         if self._game_ended() and not self._save_cleared:
-            self._engine.delete_save()
+            if self._owns_save:
+                self._engine.delete_save()
             self._save_cleared = True
 
         if Screen.door_w >= 0:
@@ -178,6 +228,9 @@ class PlayScreen(Screen):
         if self._paused:
             self._engine.stop()
 
+        if saved:
+            self._owns_save = True
+
         return saved
 
     def _toggle_pause(self) -> None:
@@ -191,17 +244,43 @@ class PlayScreen(Screen):
 
         self._paused = not self._paused
 
+    def _start_question(self) -> None:
+
+        if not self._asking:
+            self._asking = True
+            if not self._paused:
+                self._toggle_pause()
+
     def _game_ended(self) -> bool:
         return self._engine.state in (EngineState.GAME_OVER,
                                       EngineState.GAME_WON)
 
-    def _make_rect(self, w: int, h: int, y_offset: int) -> pygame.Rect:
+    def _game_in_progress(self) -> bool:
+        return self._engine.is_level_loaded and not self._game_ended()
+    def _make_rect(self, w: int, h: int, y_offset: int,
+                   x_offset: int = 0) -> pygame.Rect:
 
         rect = pygame.Rect(0, 0, w, h)
-        rect.center = (self.middle_w, self.middle_h + y_offset)
+        rect.center = (self.middle_w + x_offset, self.middle_h + y_offset)
         return rect
 
+    def _hub_buttons(self) -> dict[str, pygame.Rect]:
+
+        if not self._engine.is_level_loaded:
+            return {}
+
+        buttons = {self.PAUSE_BUTTON: self._pause_rect,
+                   self.CHEATS_BUTTON: self._cheats_rect}
+
+        if self._cheats_on:
+            buttons.update(self._cheat_rects)
+
+        return buttons
+
     def _buttons(self) -> dict[str, pygame.Rect]:
+
+        if self._asking:
+            return {"Yes": self._yes_rect, "No": self._no_rect}
 
         if self._game_ended():
             return {"Save": self._save_rect}
@@ -211,7 +290,7 @@ class PlayScreen(Screen):
                     "Save Game": self._save_game_rect,
                     "Main Menu": self._menu_rect}
 
-        return {}
+        return self._hub_buttons()
 
     def _clicked_button(self, command: InputCommand) -> str | None:
 
@@ -225,6 +304,25 @@ class PlayScreen(Screen):
 
         return None
 
+    def _is_on(self, text: str) -> bool:
+
+        if text == self.CHEATS_BUTTON:
+            return self._cheats_on
+
+        cheat = self.CHEATS.get(text)
+        if cheat is None or not self._engine.is_level_loaded:
+            return False
+
+        pacman = self._engine.pacman
+        if cheat is Cheat.INVINCIBILITY:
+            return pacman.is_invincible
+        if cheat is Cheat.INCREASE_SPEED:
+            return pacman.speed > self._config.pacman_speed
+        if cheat is Cheat.GHOST_FREEZE:
+            return any(ghost.is_frozen for ghost in self._engine.ghosts)
+
+        return False
+
     def render(self, render: Renderer) -> None:
 
         render.clear()
@@ -232,12 +330,12 @@ class PlayScreen(Screen):
         if self._engine.is_level_loaded:
             self._draw_game(render)
 
-        if self._game_ended():
+        if self._asking:
+            self._draw_question(render)
+        elif self._game_ended():
             self._draw_end_screen(render)
         elif self._paused:
             self._draw_pause_menu(render)
-
-        self._draw_cheat_status(render)
 
         render.draw_door(0, Screen.door_w)
         render.draw_door(Screen.screen_w - Screen.door_w, Screen.door_w)
@@ -250,22 +348,59 @@ class PlayScreen(Screen):
         render.render_entities(engine.pacman, engine.ghosts)
         render.render_hub(engine.score, engine.lives, engine.level,
                           engine.max_level, engine.time_left)
+        self._draw_hub_buttons(render)
 
         self._change_style = False
+
+    def _draw_button(self, render: Renderer, font: pygame.font.Font,
+                     text: str, rect: pygame.Rect, hover: bool,
+                     on: bool = False) -> None:
+        """blue = normal, yellow = mouse on it, green = active."""
+
+        if hover:
+            color = 'yellow'
+        elif on:
+            color = 'green'
+        else:
+            color = 'blue'
+
+        button = pygame.Surface(rect.size)
+        button.fill(color)
+        render.blit_window(button, rect.topleft)
+
+        render.draw_text(font, text, 'black' if hover or on else 'white',
+                         rect.center)
+
+    def _draw_hub_buttons(self, render: Renderer) -> None:
+
+        mouse = pygame.mouse.get_pos()
+        can_click = not (self._paused or self._asking or self._game_ended())
+
+        for text, rect in self._hub_buttons().items():
+            hover = can_click and rect.collidepoint(mouse)
+            self._draw_button(render, self._hub_font, text, rect, hover,
+                              self._is_on(text))
 
     def _draw_buttons(self, render: Renderer) -> None:
 
         mouse = pygame.mouse.get_pos()
 
         for text, rect in self._buttons().items():
-            hover = rect.collidepoint(mouse)
+            self._draw_button(render, self._font, text, rect,
+                              rect.collidepoint(mouse))
 
-            button = pygame.Surface(rect.size)
-            button.fill('yellow' if hover else 'blue')
-            render.blit_window(button, rect.topleft)
+    def _draw_question(self, render: Renderer) -> None:
 
-            render.draw_text(self._font, text, 'black' if hover else 'white',
-                             rect.center)
+        mid_w, mid_h = self.middle_w, self.middle_h
+
+        render.blit_window(self._overlay, (0, 0))
+        render.blit_window(self._panel,
+                           self._panel.get_rect(center=(mid_w, mid_h)).topleft)
+        render.draw_text(self._font, "Save your game before closing?",
+                         'white', (mid_w, mid_h - 60))
+        self._draw_buttons(render)
+        render.draw_text(self._small_font, self._message, 'red',
+                         (mid_w, mid_h + 120))
 
     def _draw_pause_menu(self, render: Renderer) -> None:
 
@@ -301,35 +436,3 @@ class PlayScreen(Screen):
         self._draw_buttons(render)
         render.draw_text(self._small_font, self._message, 'red',
                          (mid_w, mid_h + 220))
-
-    def _draw_cheat_status(self, render: Renderer) -> None:
-
-        for i, text in enumerate(self._cheat_lines()):
-            render.draw_text(self._small_font, text, 'red',
-                             (self.screen_w - 190,
-                              self.screen_h - 40 - i * 30), center=False)
-
-    def _cheat_lines(self) -> list[str]:
-
-        lines = []
-
-        if self._cheats_on:
-            lines.append("CHEATS ON")
-
-        if not self._engine.is_level_loaded:
-            return lines
-
-        pacman = self._engine.pacman
-        extra_speed = pacman.speed - self._config.pacman_speed
-        extra_lives = pacman.lives - self._config.lives
-
-        if pacman.is_invincible:
-            lines.append("INVINCIBLE")
-        if extra_speed > 0:
-            lines.append(f"SPEED +{extra_speed:g}")
-        if extra_lives > 0:
-            lines.append(f"EXTRA LIVES +{extra_lives}")
-        if any(ghost.is_frozen for ghost in self._engine.ghosts):
-            lines.append("GHOSTS FROZEN")
-
-        return lines
