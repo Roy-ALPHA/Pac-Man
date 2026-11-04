@@ -161,8 +161,8 @@ class Config:
                     LogType.WARNING,
                 )
 
-        validate_int_field("width", min_val=7)
-        validate_int_field("height", min_val=7)
+        validate_int_field("width", min_val=7, max_val=40)
+        validate_int_field("height", min_val=7, max_val=40)
         validate_int_field("lives", min_val=1)
         validate_int_field("points_per_pacgum", min_val=0)
         validate_int_field("points_per_super_pacgum", min_val=0)

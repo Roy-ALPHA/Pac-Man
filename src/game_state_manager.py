@@ -1,4 +1,3 @@
-from pathlib import Path
 from src.ui.inputhandler import InputCommand
 from src.ui.screen import Screen
 from src.ui.renderer import Renderer
@@ -7,6 +6,7 @@ from src.ui.highscore_screen import HighscoreScreen
 from src.main_menu_screen import MainMenuScreen
 from src.playscreen import PlayScreen
 from src.highscore import HighscoreManager
+from .data_dir import DATA_DIR
 
 
 class GameStateManager:
@@ -14,7 +14,7 @@ class GameStateManager:
     def __init__(self, config) -> None:
 
         self._config = config
-        self._highscores = HighscoreManager(Path("highscores.json"))
+        self._highscores = HighscoreManager(DATA_DIR / "highscores.json")
         self._active_screen: Screen | None = None
         self._screens: dict[str, Screen] = {
             'main_menu': MainMenuScreen(),
