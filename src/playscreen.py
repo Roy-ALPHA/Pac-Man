@@ -1,7 +1,7 @@
 from src.ui.screen import Screen
 from src.ui.renderer import Renderer
 from src.ui.inputhandler import InputCommand
-from .entities import Direction
+from .entities import Direction, Skill
 from .config import Config
 from .engine import GameEngine, EngineState, Cheat
 from .highscore import HighscoreManager
@@ -9,6 +9,7 @@ import pygame
 
 
 class PlayEngine(GameEngine):
+    """GameEngine with public access to what the screen needs."""
 
     @property
     def is_level_loaded(self):
@@ -36,7 +37,7 @@ class PlayEngine(GameEngine):
 
     @property
     def max_level(self):
-        return 10
+        return 10  # same number the engine uses in is_game_won
 
     @property
     def time_left(self):
@@ -54,9 +55,8 @@ class PlayEngine(GameEngine):
 
 class PlayScreen(Screen):
 
-    CHEATS = {1: Cheat.INVINCIBILITY, 2: Cheat.EXTRA_LIVES,
-              3: Cheat.GHOST_FREEZE, 4: Cheat.INCREASE_SPEED,
-              5: Cheat.LEVEL_SKIP}
+    # cheats that still work through the engine's own activate_cheat
+    ENGINE_CHEATS = {2: Cheat.EXTRA_LIVES, 5: Cheat.LEVEL_SKIP}
 
     def __init__(self, config: Config, highscores: HighscoreManager,
                  load: bool = False) -> None:
@@ -80,14 +80,17 @@ class PlayScreen(Screen):
         self._overlay = pygame.Surface((self.screen_w, self.screen_h))
         self._overlay.set_alpha(150)
 
-        self._save_rect = self._make_rect(300, 70, 130)
-        self._resume_rect = self._make_rect(500, 80, 0)
+        self._save_rect = self._make_rect(300, 70, 130)      # game over
+        self._resume_rect = self._make_rect(500, 80, 0)      # pause menu
         self._save_game_rect = self._make_rect(500, 80, 100)
         self._menu_rect = self._make_rect(500, 80, 200)
 
+        # a loaded game starts paused so the player can get ready
         self.loaded = load and self._engine.load()
         if self.loaded:
             self._paused = self._engine.state is EngineState.STOPPED
+
+    # ---------- input ----------
 
     def handle_input(self, command: InputCommand) -> None:
 
@@ -114,12 +117,13 @@ class PlayScreen(Screen):
             self._cheats_on = not self._cheats_on
 
         if command.cheat and self._cheats_on and self._engine.is_level_loaded:
-            self._engine.activate_cheat(self.CHEATS[command.cheat])
+            self._use_cheat(command.cheat)
 
         if command.direction is not Direction.NONE:
             self._direction = command.direction
 
-    def _handle_pause(self, command: InputCommand, clicked: str | None) -> None:
+    def _handle_pause(self, command: InputCommand,
+                      clicked: str | None) -> None:
 
         if clicked == "Resume":
             self._toggle_pause()
@@ -127,11 +131,11 @@ class PlayScreen(Screen):
             saved = self.save_game()
             self._message = "Game saved" if saved else "Could not save the game"
         elif clicked == "Main Menu":
-            command.back = True
+            command.back = True  # GameStateManager saves, then opens the menu
 
     def _handle_end(self, command: InputCommand, clicked: str | None) -> None:
 
-        command.back = False
+        command.back = False  # nothing leaves this screen except Save
 
         self._name += command.text
         if command.backspace:
@@ -143,10 +147,33 @@ class PlayScreen(Screen):
             if saved:
                 command.show_highscores = True
             else:
-                self._message = message
+                self._message = message  # the reason comes from HighscoreManager
+
+    def _use_cheat(self, number: int) -> None:
+
+        pacman = self._engine.pacman
+
+        if number == 1:      # invincible on/off
+            pacman.activate_effect(Skill.INVINCIBILITY,
+                                   not pacman.is_invincible)
+
+        elif number == 3:    # freeze ghosts on/off
+            # in their code buff=False freezes and buff=True unfreezes,
+            # so passing is_frozen switches it
+            for ghost in self._engine.ghosts:
+                ghost.activate_effect(Skill.FREEZ, ghost.is_frozen)
+
+        elif number == 4:    # speed x1.5 (it does not stack)
+            pacman.activate_effect(Skill.SPEED)
+
+        else:                # 2 and 5 work through their engine
+            self._engine.activate_cheat(self.ENGINE_CHEATS[number])
+
+    # ---------- update ----------
 
     def update(self, dt: int) -> None:
 
+        # a finished game cannot be resumed, so delete its save once
         if self._game_ended() and not self._save_cleared:
             self._engine.delete_save()
             self._save_cleared = True
@@ -154,7 +181,7 @@ class PlayScreen(Screen):
         if Screen.door_w >= 0:
             Screen.door_w -= 1100 * (dt / 1000)
 
-        self._engine.tick(dt / 1000, self._direction)
+        self._engine.tick(dt / 1000, self._direction)  # does nothing if paused
         self._update_cursor()
 
     def _update_cursor(self) -> None:
@@ -165,11 +192,16 @@ class PlayScreen(Screen):
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND if on_button
                                 else pygame.SYSTEM_CURSOR_ARROW)
 
+    # ---------- saving and pausing ----------
+
     def save_game(self) -> bool:
+        """Save the game. Returns True if it worked."""
 
         if self._game_ended() or not self._engine.is_level_loaded:
             return False
 
+        # a paused engine is STOPPED, so resume it just for the save,
+        # otherwise the file would say "STOPPED"
         if self._paused:
             self._engine.resume()
 
@@ -195,6 +227,8 @@ class PlayScreen(Screen):
         return self._engine.state in (EngineState.GAME_OVER,
                                       EngineState.GAME_WON)
 
+    # ---------- buttons ----------
+
     def _make_rect(self, w: int, h: int, y_offset: int) -> pygame.Rect:
 
         rect = pygame.Rect(0, 0, w, h)
@@ -202,6 +236,7 @@ class PlayScreen(Screen):
         return rect
 
     def _buttons(self) -> dict[str, pygame.Rect]:
+        """The buttons visible right now (text -> rectangle)."""
 
         if self._game_ended():
             return {"Save": self._save_rect}
@@ -224,6 +259,8 @@ class PlayScreen(Screen):
                 return text
 
         return None
+
+    # ---------- drawing ----------
 
     def render(self, render: Renderer) -> None:
 
@@ -310,6 +347,7 @@ class PlayScreen(Screen):
                               self.screen_h - 40 - i * 30), center=False)
 
     def _cheat_lines(self) -> list[str]:
+        """What to show in the bottom right corner."""
 
         lines = []
 
