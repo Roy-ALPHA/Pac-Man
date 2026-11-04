@@ -209,7 +209,10 @@ class Entity(ABC):
 			self._next_direction = Direction.NONE
 			return
 
-		if self.can_move(self._next_direction) and self._cur_direction is not self._next_direction:
+		can_turn = self.can_move(self._next_direction) and (self._cur_direction is not self._next_direction)
+		blocked = not self.can_move(self._cur_direction) and not self.can_move(self._next_direction)         
+    
+		if can_turn or blocked:
 			self._move_to_center_and_stop(distance)
 		elif self.can_move(self._cur_direction):
 			self._move(distance, self._cur_direction)
