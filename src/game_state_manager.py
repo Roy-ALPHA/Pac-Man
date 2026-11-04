@@ -38,7 +38,6 @@ class GameStateManager:
     def change_state(self, new_state: str) -> None:
 
         if new_state == 'main_menu':
-            self.save_game()  # leaving a game saves it
             Screen.door_closed = False
 
         elif new_state == 'play':

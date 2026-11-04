@@ -33,7 +33,6 @@ class PacmanApp:
             self.state_manager.handle_input(command)
 
             if command.quit:
-                self.state_manager.save_game()
                 return self.quit()
 
             for flag, screen in self.SCREENS.items():

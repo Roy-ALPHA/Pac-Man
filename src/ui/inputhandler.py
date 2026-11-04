@@ -23,6 +23,7 @@ class InputCommand:
     cheat: int = 0
     toggle_cheats: bool = False
     continue_game: bool = False
+    restart: bool = False
 
 
 class InputHandler:
@@ -64,8 +65,11 @@ class InputHandler:
 
                 elif event.key in CHEAT_KEYS:
                     command.cheat = CHEAT_KEYS[event.key]
+                
+                elif event.key == pygame.K_r:
+                    command.restart = True
 
-                if event.unicode.isprintable():
+                elif event.unicode.isprintable():
                     command.text += event.unicode
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
