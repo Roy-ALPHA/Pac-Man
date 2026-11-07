@@ -7,6 +7,7 @@ import math
 import random
 from typing import TYPE_CHECKING
 from .entities import Direction, GhostState, PRIORITY_DIRECTIONS
+from collections import deque
 
 if TYPE_CHECKING:
     from .entities import Ghost, PacMan
@@ -39,65 +40,55 @@ class GhostStrategy(ABC):
         if from_coor == target:
             return GhostStrategy._wander(from_coor, opposite, maze)
 
-        def search(
-            with_opposite: bool,
-        ) -> dict[tuple[int, int], tuple[int, int] | None] | None:
-            visited = {from_coor}
-            queue = [from_coor]
+        def search(skip_opposite: bool) -> Direction:
+            """Find the next direction towards target using BFS.
 
-            tracker: dict[tuple[int, int], tuple[int, int] | None] = {
-                from_coor: None
-            }
+            Args:
+                skip_opposite: Whether reversing into opposite is skipped.
+
+            Returns:
+                Direction: Next direction towards target or Direction.NONE.
+            """
+            queue: deque[tuple[tuple[int, int], Direction]] = deque(
+                [(from_coor, Direction.NONE)]
+            )
+            visited = {from_coor}
 
             while queue:
-                cur = queue.pop(0)
-
+                cur, first_direction = queue.popleft()
                 if cur == target:
-                    break
+                    return first_direction
 
                 for d in PRIORITY_DIRECTIONS:
                     if (
-                        cur == from_coor
-                        and with_opposite
-                        and opposite is d
+                        skip_opposite
+                        and cur == from_coor
+                        and d is opposite
                     ):
                         continue
 
-                    cur_x, cur_y = cur
-                    n = d.dx + cur_x, d.dy + cur_y
-
-                    if maze.is_wall(*n) or n in visited:
+                    cx, cy = cur
+                    next_coor = d.dx + cx, d.dy + cy
+                    if maze.is_wall(*next_coor) or next_coor in visited:
                         continue
 
-                    queue.append(n)
-                    visited.add(n)
-                    tracker[n] = cur
+                    visited.add(next_coor)
+                    next_direction = (
+                        d if first_direction is Direction.NONE
+                        else first_direction
+                    )
+                    queue.append((next_coor, next_direction))
 
-            return tracker if len(tracker) > 1 else None
+            return Direction.NONE
 
-        tracker = search(True)
-        if not tracker:
-            tracker = search(False)
+        direction = search(skip_opposite=True)
+        if direction is Direction.NONE:
+            direction = search(skip_opposite=False)
 
-        if not tracker or target not in tracker:
-            return GhostStrategy._wander(from_coor, opposite, maze)
-
-        path = []
-        cur: tuple[int, int] | None = target
-        while cur is not None and cur != from_coor:
-            path.append(cur)
-            cur = tracker[cur]
-
-        if not path:
-            return GhostStrategy._wander(from_coor, opposite, maze)
-
-        path.reverse()
-
-        for d in PRIORITY_DIRECTIONS:
-            if (d.dx + from_coor[0], d.dy + from_coor[1]) == path[0]:
-                return d
-
-        return GhostStrategy._wander(from_coor, opposite, maze)
+        return (
+            direction if direction is not Direction.NONE
+            else GhostStrategy._wander(from_coor, opposite, maze)
+        )
 
     @staticmethod
     def _wander(
