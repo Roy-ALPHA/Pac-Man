@@ -94,7 +94,7 @@ class Config:
 
         # --- Reading & Parsing ---
         try:
-            raw_text = path.read_text()
+            raw_text = path.read_text(encoding="utf-8")
             clean_text = cls._strip_comments(raw_text)
 
             raw_dict = json.loads(clean_text)

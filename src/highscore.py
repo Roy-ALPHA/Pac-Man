@@ -32,7 +32,7 @@ class HighscoreManager:
             return
 
         try:
-            data = json.loads(self._file_path.read_text())
+            data = json.loads(self._file_path.read_text(encoding="utf-8"))
 
             if not isinstance(data, dict) or not data:
                 log(
@@ -178,7 +178,8 @@ class HighscoreManager:
 
         try:
             self._file_path.write_text(
-                json.dumps(top10_highscores, indent=2)
+                json.dumps(top10_highscores, indent=2),
+                encoding="utf-8",
             )
             log(
                 f"Successfully saved highscore for '{name}': {score} pts",

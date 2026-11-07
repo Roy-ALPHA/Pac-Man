@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Sequence
 from .logs import log, LogType
 
 if TYPE_CHECKING:
     from .engine import GameEngine
+    from .entities import Entity
 
 
 class Effect(ABC):
@@ -66,15 +67,17 @@ class FrightenGhostsEffect(Effect):
 class SpeedDebuffEffect(Effect):
     """Effect that reduces movement speed of target entities."""
 
-    def __init__(self, duration: float, targets: Any) -> None:
+    def __init__(
+        self, duration: float, targets: Entity | Sequence[Entity]
+    ) -> None:
         """Initialize the speed debuff effect.
 
         Args:
             duration: Duration in seconds for the debuff.
-            targets: Target entities or group designation.
+            targets: Target entity or sequence of entities.
         """
         self._duration: float = duration
-        self._targets: Any = targets
+        self._targets: Entity | Sequence[Entity] = targets
 
     def apply(self, engine: GameEngine) -> None:
         """Apply speed reduction to target entities.
@@ -88,15 +91,17 @@ class SpeedDebuffEffect(Effect):
 class SpeedBuffEffect(Effect):
     """Effect that increases movement speed of target entities."""
 
-    def __init__(self, duration: float, targets: Any) -> None:
+    def __init__(
+        self, duration: float, targets: Entity | Sequence[Entity]
+    ) -> None:
         """Initialize the speed buff effect.
 
         Args:
             duration: Duration in seconds for the buff.
-            targets: Target entities or group designation.
+            targets: Target entity or sequence of entities.
         """
         self._duration: float = duration
-        self._targets: Any = targets
+        self._targets: Entity | Sequence[Entity] = targets
 
     def apply(self, engine: GameEngine) -> None:
         """Apply speed increase to target entities.

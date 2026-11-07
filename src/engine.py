@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, replace
 from enum import Enum, auto
 import json
-from typing import Any
+from typing import Any, Sequence
 from .config import Config, LevelConfig
 from . import consumables
 from .data_dir import DATA_DIR
@@ -223,7 +223,7 @@ class GameEngine:
                             ),
                             consumables.SpeedBuffEffect(
                                 self._levelconfig.frightened_duration,
-                                [self._pacman],
+                                self._pacman,
                             ),
                             consumables.SpeedDebuffEffect(
                                 self._levelconfig.frightened_duration,
@@ -333,55 +333,56 @@ class GameEngine:
     def apply_effect(
         self,
         effect: entities.EntityEffect,
+        targets: entities.Entity | Sequence[entities.Entity],
         duration: float | None = None,
-        targets: Any = None,
     ) -> None:
         """Apply a status effect to designated target characters.
 
         Args:
             effect: Effect enum to apply.
+            targets: Target entity or sequence of entities.
             duration: Duration in seconds, or None for permanent.
-            targets: Target entity, list, or designation string.
         """
-        target_entities: list[entities.Entity] = []
-        if targets == "pacman" or targets is None or targets is self._pacman:
-            target_entities.append(self._pacman)
-        elif targets == "ghosts" or targets is self._ghosts:
-            target_entities.extend(self._ghosts)
-        elif isinstance(targets, list):
-            target_entities.extend(targets)
+        if isinstance(targets, entities.Entity):
+            target_list: Sequence[entities.Entity] = [targets]
+        else:
+            target_list = targets
 
-        for entity in target_entities:
+        for entity in target_list:
             entity.activate_effect(effect, duration=duration)
 
     def increase_speed(
-        self, duration: float, targets: Any = "pacman"
+        self,
+        duration: float,
+        targets: entities.Entity | Sequence[entities.Entity],
     ) -> None:
         """Apply a temporary speed buff to target characters.
 
         Args:
             duration: Duration in seconds.
-            targets: Target entities.
+            targets: Target entity or sequence of entities.
         """
         self.apply_effect(
             entities.EntityEffect.SPEED_BUFF,
-            duration=duration,
             targets=targets,
+            duration=duration,
         )
 
     def decrease_speed(
-        self, duration: float, targets: Any = "pacman"
+        self,
+        duration: float,
+        targets: entities.Entity | Sequence[entities.Entity],
     ) -> None:
         """Apply a temporary speed debuff to target characters.
 
         Args:
             duration: Duration in seconds.
-            targets: Target entities.
+            targets: Target entity or sequence of entities.
         """
         self.apply_effect(
             entities.EntityEffect.SPEED_DEBUFF,
-            duration=duration,
             targets=targets,
+            duration=duration,
         )
 
     def _level_timer(self, dt: float) -> None:
