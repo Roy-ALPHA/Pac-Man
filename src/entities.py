@@ -1,367 +1,738 @@
+"""Entities, direction vectors, and character state models."""
+
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from enum import Enum, auto
+from typing import TYPE_CHECKING, Any
+from .logs import log, LogType
+
+if TYPE_CHECKING:
+    from .ghost_ai import GhostStrategy
+    from .maze_adapter import MazeGrid
 
 
 class GhostState(Enum):
-	CHASE = auto()
-	FRIGHTENED = auto()
-	WANDER = auto()
-	DIED = auto()
+    """Behavioral state of a ghost entity."""
+
+    CHASE = auto()
+    FRIGHTENED = auto()
+    WANDER = auto()
+    DIED = auto()
+
 
 class EntityEffect(Enum):
-	SPEED_BUFF = auto()
-	SPEED_DEBUFF = auto()
-	INVINCIBILITY = auto()
-	FREEZE = auto()
+    """Temporary or permanent status effects applied to an entity."""
+
+    SPEED_BUFF = auto()
+    SPEED_DEBUFF = auto()
+    INVINCIBILITY = auto()
+    FREEZE = auto()
 
 
 class Direction(Enum):
-	UP = (0, -1)
-	DOWN = (0, 1)
-	LEFT = (-1, 0)
-	RIGHT = (1, 0)
-	NONE = (0, 0)
+    """Movement direction vectors on the 2D maze grid."""
 
-	@property
-	def dx(self) -> int:
-		return self.value[0]
+    UP = (0, -1)
+    DOWN = (0, 1)
+    LEFT = (-1, 0)
+    RIGHT = (1, 0)
+    NONE = (0, 0)
 
-	@property
-	def dy(self) -> int:
-		return self.value[1]
+    @property
+    def dx(self) -> int:
+        """Return horizontal step component.
 
-	def opposite(self) -> "Direction":
-		opposites = {
-			Direction.UP: Direction.DOWN,
-			Direction.DOWN: Direction.UP,
-			Direction.LEFT: Direction.RIGHT,
-			Direction.RIGHT: Direction.LEFT,
-			Direction.NONE: Direction.NONE,
-		}
-		return opposites[self]
+        Returns:
+            int: -1, 0, or 1.
+        """
+        return self.value[0]
+
+    @property
+    def dy(self) -> int:
+        """Return vertical step component.
+
+        Returns:
+            int: -1, 0, or 1.
+        """
+        return self.value[1]
+
+    def opposite(self) -> "Direction":
+        """Return the opposite direction vector.
+
+        Returns:
+            Direction: Directly reverse direction.
+        """
+        opposites = {
+            Direction.UP: Direction.DOWN,
+            Direction.DOWN: Direction.UP,
+            Direction.LEFT: Direction.RIGHT,
+            Direction.RIGHT: Direction.LEFT,
+            Direction.NONE: Direction.NONE,
+        }
+        return opposites[self]
 
 
-PRIORITY_DIRECTIONS = [Direction.UP, Direction.LEFT, Direction.DOWN, Direction.RIGHT]
+PRIORITY_DIRECTIONS = [
+    Direction.UP,
+    Direction.LEFT,
+    Direction.DOWN,
+    Direction.RIGHT,
+]
 
 
 class Entity(ABC):
-	def __init__(self, spawn_x, spawn_y, speed, grid, name):
-		self._spawn_x = spawn_x
-		self._spawn_y = spawn_y
-		self._x = spawn_x
-		self._y = spawn_y
-		self._speed = speed
-		self._grid = grid
-		self._cur_direction = Direction.NONE
-		self._next_direction = Direction.NONE
-		self._base_speed = self._speed
-		self._name = name
-		self._invincible = False
-		self._effects = dict()
+    """Abstract base class for all movable grid characters."""
 
-	@property
-	def name(self):
-		return self._name
+    def __init__(
+        self,
+        spawn_x: float,
+        spawn_y: float,
+        speed: float,
+        grid: MazeGrid,
+        name: str,
+    ) -> None:
+        """Initialize base entity attributes and coordinates.
 
-	@property
-	def cur_direction(self):
-		return self._cur_direction
+        Args:
+            spawn_x: Initial horizontal spawn tile coordinate.
+            spawn_y: Initial vertical spawn tile coordinate.
+            speed: Base speed in tiles per second.
+            grid: Active maze grid reference.
+            name: Human-readable entity name.
+        """
+        self._spawn_x: float = spawn_x
+        self._spawn_y: float = spawn_y
+        self._x: float = float(spawn_x)
+        self._y: float = float(spawn_y)
+        self._speed: float = float(speed)
+        self._grid: MazeGrid = grid
+        self._cur_direction: Direction = Direction.NONE
+        self._next_direction: Direction = Direction.NONE
+        self._base_speed: float = self._speed
+        self._name: str = name
+        self._invincible: bool = False
+        self._effects: dict[EntityEffect, float | None] = {}
 
-	@property
-	def next_direction(self):
-		return self._next_direction
+    @property
+    def name(self) -> str:
+        """Return the entity's display name.
 
-	@property
-	def is_invincible(self):
-		return self._invincible
+        Returns:
+            str: Name identifier.
+        """
+        return self._name
 
-	@property
-	def speed(self):
-		return self._speed
+    @property
+    def cur_direction(self) -> Direction:
+        """Return the current movement direction.
 
-	@property
-	def x(self):
-		return self._x
+        Returns:
+            Direction: Active movement direction.
+        """
+        return self._cur_direction
 
-	@property
-	def y(self):
-		return self._y
+    @property
+    def next_direction(self) -> Direction:
+        """Return the buffered next movement direction.
 
-	@property
-	def tile(self):
-		return (round(self._x), round(self._y))
+        Returns:
+            Direction: Pending queued direction.
+        """
+        return self._next_direction
 
-	@property
-	def spawn(self):
-		return self._spawn_x, self._spawn_y
+    @property
+    def is_invincible(self) -> bool:
+        """Check whether the entity is invulnerable to death.
 
-	@abstractmethod
-	def respawn(self):
-		pass
+        Returns:
+            bool: True if invincible, False otherwise.
+        """
+        return self._invincible
 
-	def _recalculate_stats(self):
-		"""Recalculate dynamic stats from all currently active effects."""
-		# 1. Handle Invincibility
-		self._invincible = (EntityEffect.INVINCIBILITY in self._effects)
+    @property
+    def speed(self) -> float:
+        """Return current effective movement speed.
 
-		# 2. Handle Speed & Freeze
-		if EntityEffect.FREEZE in self._effects:
-			self._speed = 0.0
-		else:
-			multiplier = 1.0
-			if EntityEffect.SPEED_BUFF in self._effects:
-				multiplier *= 1.5
-			if EntityEffect.SPEED_DEBUFF in self._effects:
-				multiplier *= 0.5
-			self._speed = self._base_speed * multiplier
+        Returns:
+            float: Speed in tiles per second.
+        """
+        return self._speed
 
-	def has_effect(self, effect: EntityEffect) -> bool:
-		return effect in self._effects
+    @property
+    def x(self) -> float:
+        """Return continuous horizontal position.
 
-	def activate_effect(self, effect: EntityEffect, duration=None):
-		"""Activate an effect with an optional timer."""
-		self._effects[effect] = duration
-		self._recalculate_stats()
+        Returns:
+            float: Exact x position.
+        """
+        return self._x
 
-	def desactivate_effect(self, effect: EntityEffect):
-		"""Remove an effect and restore stats cleanly."""
-		self._effects.pop(effect, None)
-		self._recalculate_stats()
+    @property
+    def y(self) -> float:
+        """Return continuous vertical position.
 
-	def remove_all_effects(self):
-		self._effects.clear()
-		self._recalculate_stats() 
+        Returns:
+            float: Exact y position.
+        """
+        return self._y
 
-	def get_effects_state(self) -> dict:
-		"""Serialize active effects to a JSON-compatible dict."""
-		return {effect.name: duration for effect, duration in self._effects.items()}
+    @property
+    def tile(self) -> tuple[int, int]:
+        """Return rounded grid tile coordinates.
 
-	def set_effects_state(self, effects_data: dict) -> None:
-		"""Deserialize and re-apply effects from a dictionary."""
-		self._effects.clear()
-		for effect_name, duration in effects_data.items():
-			if effect_name in EntityEffect.__members__:
-				self._effects[EntityEffect[effect_name]] = duration
-		self._recalculate_stats() 
+        Returns:
+            tuple[int, int]: (tile_x, tile_y) on the grid.
+        """
+        return (round(self._x), round(self._y))
 
-	def check_effect_duration(self, dt):
-		if not self._effects: 
-			return
+    @property
+    def spawn(self) -> tuple[int, int]:
+        """Return initial spawn tile coordinates.
 
-		updated_effects = dict()
-		stats_changed = False
+        Returns:
+            tuple[int, int]: (spawn_x, spawn_y) on the grid.
+        """
+        return round(self._spawn_x), round(self._spawn_y)
 
-		for effect, duration in list(self._effects.items()): 
-			if duration is None: 
-				updated_effects[effect] = None  # Permanent effect / cheat 
-			elif duration - dt <= 0:
-				stats_changed = True            # Effect expired!
-			else:
-				updated_effects[effect] = duration - dt 
+    @abstractmethod
+    def respawn(self) -> None:
+        """Reset entity position and state back to its spawn location."""
+        pass
 
-		self._effects = updated_effects
-		if stats_changed:
-			self._recalculate_stats()
+    def _recalculate_stats(self) -> None:
+        """Recalculate dynamic stats from all currently active effects."""
+        # 1. Handle Invincibility
+        self._invincible = EntityEffect.INVINCIBILITY in self._effects
 
-	def update_fields(self, states):
-		for key, value in states.items():
-			setattr(self, key, value)
+        # 2. Handle Speed & Freeze
+        if EntityEffect.FREEZE in self._effects:
+            self._speed = 0.0
+        else:
+            multiplier = 1.0
+            if EntityEffect.SPEED_BUFF in self._effects:
+                multiplier *= 1.5
+            if EntityEffect.SPEED_DEBUFF in self._effects:
+                multiplier *= 0.5
+            self._speed = self._base_speed * multiplier
 
-	def can_move(self, direction):
-		if direction is Direction.NONE:
-			return False
-		tile_x, tile_y = self.tile
-		target_x = tile_x + direction.dx
-		target_y = tile_y + direction.dy
-		return not self._grid.is_wall(target_x, target_y)
+    def has_effect(self, effect: EntityEffect) -> bool:
+        """Check whether a specific status effect is currently active.
 
-	def _move(self, distance: float, direction):
-		self._x += direction.dx * distance
-		self._y += direction.dy * distance
+        Args:
+            effect: Effect to query.
 
-	def _move_to_center_and_stop(self, distance):
-		center_x, center_y = self.tile
-		remaining = (center_x - self._x) * self._cur_direction.dx + (center_y - self._y) * self._cur_direction.dy
-		if remaining <= 0 or distance >= remaining:
-			self._x, self._y = float(center_x), float(center_y)
-			if self.can_move(self._next_direction):
-				self._move(distance - max(0.0, remaining), self._next_direction)
-				self._cur_direction = self._next_direction
-				self._next_direction = Direction.NONE
-			elif self.can_move(self._cur_direction):
-				self._move(distance - max(0.0, remaining), self._cur_direction)
-			else:
-				self._cur_direction = Direction.NONE
-		else:
-			self._move(distance, self._cur_direction)
+        Returns:
+            bool: True if effect is active, False otherwise.
+        """
+        return effect in self._effects
 
-	def _calc_movement(self, distance):
-		if self._cur_direction is Direction.NONE:
-			if self.can_move(self._next_direction):
-				self._cur_direction = self._next_direction
-				self._next_direction = Direction.NONE
-				self._move(distance, self._cur_direction)
-			return
+    def activate_effect(
+        self, effect: EntityEffect, duration: float | None = None
+    ) -> None:
+        """Activate an effect with an optional timer.
 
-		if self._cur_direction.opposite() is self._next_direction:
-			self._move(distance, self._next_direction)
-			self._cur_direction = self._next_direction
-			self._next_direction = Direction.NONE
-			return
+        Args:
+            effect: Effect to apply.
+            duration: Duration in seconds, or None for permanent.
+        """
+        self._effects[effect] = duration
+        self._recalculate_stats()
+        dur_str = f"{duration:.1f}s" if duration is not None else "permanent"
+        log(
+            f"{self._name} gained {effect.name} ({dur_str})",
+            "Entity",
+            LogType.INFO,
+        )
 
-		can_turn = self.can_move(self._next_direction) and (self._cur_direction is not self._next_direction)
-		blocked = not self.can_move(self._cur_direction) and not self.can_move(self._next_direction)         
-    
-		if can_turn or blocked:
-			self._move_to_center_and_stop(distance)
-		elif self.can_move(self._cur_direction):
-			self._move(distance, self._cur_direction)
+    def desactivate_effect(self, effect: EntityEffect) -> None:
+        """Remove an effect and restore stats cleanly.
 
-	def __eq__(self, other):
-		return self.tile == other.tile
+        Args:
+            effect: Effect to remove.
+        """
+        if effect in self._effects:
+            self._effects.pop(effect, None)
+            self._recalculate_stats()
+            log(
+                f"{self._name} lost effect {effect.name}",
+                "Entity",
+                LogType.INFO,
+            )
 
-	@abstractmethod
-	def update(self, dt):
-		pass
+    def remove_all_effects(self) -> None:
+        """Clear all active status effects and recalculate base stats."""
+        self._effects.clear()
+        self._recalculate_stats()
+
+    def get_effects_state(self) -> dict[str, float | None]:
+        """Serialize active effects to a JSON-compatible dict.
+
+        Returns:
+            dict[str, float | None]: Mapping of effect name to duration.
+        """
+        return {
+            effect.name: duration for effect, duration in self._effects.items()
+        }
+
+    def set_effects_state(
+        self, effects_data: dict[str, float | None]
+    ) -> None:
+        """Deserialize and re-apply effects from a dictionary.
+
+        Args:
+            effects_data: Dictionary mapping effect names to durations.
+        """
+        self._effects.clear()
+        for effect_name, duration in effects_data.items():
+            if effect_name in EntityEffect.__members__:
+                self._effects[EntityEffect[effect_name]] = duration
+        self._recalculate_stats()
+
+    def check_effect_duration(self, dt: float) -> None:
+        """Update effect timers and expire finished effects.
+
+        Args:
+            dt: Delta time elapsed in seconds.
+        """
+        if not self._effects:
+            return
+
+        updated_effects: dict[EntityEffect, float | None] = {}
+        stats_changed = False
+
+        for effect, duration in list(self._effects.items()):
+            if duration is None:
+                updated_effects[effect] = None  # Permanent effect / cheat
+            elif duration - dt <= 0:
+                stats_changed = True  # Effect expired!
+                log(
+                    f"{self._name} effect expired: {effect.name}",
+                    "Entity",
+                    LogType.INFO,
+                )
+            else:
+                updated_effects[effect] = duration - dt
+
+        self._effects = updated_effects
+        if stats_changed:
+            self._recalculate_stats()
+
+    def update_fields(self, states: dict[str, Any]) -> None:
+        """Update internal instance variables from a dictionary.
+
+        Args:
+            states: Key-value mapping of attribute names to values.
+        """
+        for key, value in states.items():
+            setattr(self, key, value)
+
+    def can_move(self, direction: Direction) -> bool:
+        """Check whether the entity can traverse into an adjacent tile.
+
+        Args:
+            direction: Candidate direction to step.
+
+        Returns:
+            bool: True if destination tile is not a wall.
+        """
+        if direction is Direction.NONE:
+            return False
+        tile_x, tile_y = self.tile
+        target_x = tile_x + direction.dx
+        target_y = tile_y + direction.dy
+        return not self._grid.is_wall(target_x, target_y)
+
+    def _move(self, distance: float, direction: Direction) -> None:
+        """Translate entity coordinates along a direction vector.
+
+        Args:
+            distance: Distance in tile units.
+            direction: Direction vector to step along.
+        """
+        self._x += direction.dx * distance
+        self._y += direction.dy * distance
+
+    def _move_to_center_and_stop(self, distance: float) -> None:
+        """Move towards the center of current tile before turning or stopping.
+
+        Args:
+            distance: Travel distance budget for this frame.
+        """
+        center_x, center_y = self.tile
+        remaining = (
+            (center_x - self._x) * self._cur_direction.dx
+            + (center_y - self._y) * self._cur_direction.dy
+        )
+        if remaining <= 0 or distance >= remaining:
+            self._x, self._y = float(center_x), float(center_y)
+            if self.can_move(self._next_direction):
+                self._move(
+                    distance - max(0.0, remaining), self._next_direction
+                )
+                self._cur_direction = self._next_direction
+                self._next_direction = Direction.NONE
+            elif self.can_move(self._cur_direction):
+                self._move(
+                    distance - max(0.0, remaining), self._cur_direction
+                )
+            else:
+                self._cur_direction = Direction.NONE
+        else:
+            self._move(distance, self._cur_direction)
+
+    def _calc_movement(self, distance: float) -> None:
+        """Calculate continuous translation across tiles taking turns.
+
+        Args:
+            distance: Movement distance budget in tile units.
+        """
+        if self._cur_direction is Direction.NONE:
+            if self.can_move(self._next_direction):
+                self._cur_direction = self._next_direction
+                self._next_direction = Direction.NONE
+                self._move(distance, self._cur_direction)
+            return
+
+        if self._cur_direction.opposite() is self._next_direction:
+            self._move(distance, self._next_direction)
+            self._cur_direction = self._next_direction
+            self._next_direction = Direction.NONE
+            return
+
+        can_turn = self.can_move(self._next_direction) and (
+            self._cur_direction is not self._next_direction
+        )
+        blocked = (
+            not self.can_move(self._cur_direction)
+            and not self.can_move(self._next_direction)
+        )
+
+        if can_turn or blocked:
+            self._move_to_center_and_stop(distance)
+        elif self.can_move(self._cur_direction):
+            self._move(distance, self._cur_direction)
+
+    def __eq__(self, other: object) -> bool:
+        """Check equality between two entities based on grid tile position.
+
+        Args:
+            other: Other object to compare against.
+
+        Returns:
+            bool: True if both entities share the same tile coordinates.
+        """
+        if not isinstance(other, Entity):
+            return False
+        return self.tile == other.tile
+
+    @abstractmethod
+    def update(self, dt: float) -> None:
+        """Update entity position and timers by delta time.
+
+        Args:
+            dt: Frame delta time in seconds.
+        """
+        pass
 
 
 class PacMan(Entity):
-	def __init__(self, spawn_x, spawn_y, speed, grid, lives, name):
-		super().__init__(spawn_x, spawn_y, speed, grid, name)
-		self._lives = lives
+    """Player-controlled Pac-Man character entity."""
 
-	@property
-	def is_alive(self):
-		return self._lives > 0
+    def __init__(
+        self,
+        spawn_x: float,
+        spawn_y: float,
+        speed: float,
+        grid: MazeGrid,
+        lives: int,
+        name: str,
+    ) -> None:
+        """Initialize Pac-Man character with life count.
 
-	@property
-	def lives(self):
-		return self._lives
+        Args:
+            spawn_x: Spawn column.
+            spawn_y: Spawn row.
+            speed: Base travel speed in tiles per second.
+            grid: Active maze grid reference.
+            lives: Initial lives count.
+            name: Entity name.
+        """
+        super().__init__(spawn_x, spawn_y, speed, grid, name)
+        self._lives: int = lives
 
-	def respawn(self):
-		self._x, self._y = self._spawn_x, self._spawn_y
-		self._cur_direction = Direction.NONE
-		self._next_direction = Direction.NONE
-		self.remove_all_effects()
+    @property
+    def is_alive(self) -> bool:
+        """Check whether Pac-Man has any remaining lives.
 
-	def can_eat_ghost(self, ghost):
-		return ghost == self and ghost.is_frighten
+        Returns:
+            bool: True if lives > 0.
+        """
+        return self._lives > 0
 
-	def lose_life(self):
-		if self.is_alive:
-			self._lives -= 1
+    @property
+    def lives(self) -> int:
+        """Return the current remaining lives count.
 
-	def add_life(self):
-		if self.is_alive:
-			self._lives += 1
+        Returns:
+            int: Remaining lives.
+        """
+        return self._lives
 
-	def toggle_invincibility(self):
-		if self.has_effect(EntityEffect.INVINCIBILITY):
-			self.desactivate_effect(EntityEffect.INVINCIBILITY)
-		else:
-			self.activate_effect(EntityEffect.INVINCIBILITY)
+    def respawn(self) -> None:
+        """Reset Pac-Man position to spawn tile and clear all effects."""
+        self._x, self._y = self._spawn_x, self._spawn_y
+        self._cur_direction = Direction.NONE
+        self._next_direction = Direction.NONE
+        self.remove_all_effects()
 
-	def increase_speed(self):
-		if self.has_effect(EntityEffect.SPEED_BUFF):
-			self.desactivate_effect(EntityEffect.SPEED_BUFF)
-		else:
-			self.activate_effect(EntityEffect.SPEED_BUFF)
+    def can_eat_ghost(self, ghost: Ghost) -> bool:
+        """Check whether Pac-Man can consume a vulnerable ghost.
 
-	def request_direction(self, direction):
-		self._next_direction = direction
+        Args:
+            ghost: Target ghost to evaluate.
 
+        Returns:
+            bool: True if colliding with a frightened ghost.
+        """
+        return ghost == self and ghost.is_frighten
 
-	def update(self, dt):
-		if not self.is_alive:
-			return
+    def lose_life(self) -> None:
+        """Decrement lives count by one if currently alive."""
+        if self.is_alive:
+            self._lives -= 1
+            log(
+                f"Pac-Man lost a life! Remaining lives: {self._lives}",
+                "PacMan",
+                LogType.WARNING,
+            )
 
-		self.check_effect_duration(dt)
+    def add_life(self) -> None:
+        """Increment lives count by one if currently alive."""
+        if self.is_alive:
+            self._lives += 1
+            log(
+                f"Pac-Man gained an extra life! Total lives: {self._lives}",
+                "PacMan",
+                LogType.INFO,
+            )
 
-		distance = self._speed * dt
-		self._calc_movement(distance)
+    def toggle_invincibility(self) -> None:
+        """Toggle invincibility cheat effect on or off."""
+        if self.has_effect(EntityEffect.INVINCIBILITY):
+            self.desactivate_effect(EntityEffect.INVINCIBILITY)
+        else:
+            self.activate_effect(EntityEffect.INVINCIBILITY)
+
+    def increase_speed(self) -> None:
+        """Toggle speed buff cheat effect on or off."""
+        if self.has_effect(EntityEffect.SPEED_BUFF):
+            self.desactivate_effect(EntityEffect.SPEED_BUFF)
+        else:
+            self.activate_effect(EntityEffect.SPEED_BUFF)
+
+    def request_direction(self, direction: Direction) -> None:
+        """Buffer a player directional input command.
+
+        Args:
+            direction: Requested input direction.
+        """
+        self._next_direction = direction
+
+    def update(self, dt: float) -> None:
+        """Update Pac-Man timers, apply buffs, and advance position.
+
+        Args:
+            dt: Frame elapsed time in seconds.
+        """
+        if not self.is_alive:
+            return
+
+        self.check_effect_duration(dt)
+
+        distance = self._speed * dt
+        self._calc_movement(distance)
 
 
 class Ghost(Entity):
-	def __init__(self, spawn_x, spawn_y, speed, grid, strategy, pacman, name, blinky=None):
-		super().__init__(spawn_x, spawn_y, speed, grid, name)
-		self._state = GhostState.CHASE
-		self._strategy = strategy
-		self._pacman = pacman
-		self._blinky = blinky
-		self._target_tile = None
+    """Enemy Ghost entity controlled by targeting strategy AI."""
 
-	@property
-	def is_frighten(self):
-		return self._state is GhostState.FRIGHTENED
+    def __init__(
+        self,
+        spawn_x: float,
+        spawn_y: float,
+        speed: float,
+        grid: MazeGrid,
+        strategy: GhostStrategy,
+        pacman: PacMan,
+        name: str,
+        blinky: Ghost | None = None,
+    ) -> None:
+        """Initialize ghost character with strategic AI and targets.
 
-	@property
-	def is_frozen(self):
-		return self.has_effect(EntityEffect.FREEZE) or self._speed == 0
+        Args:
+            spawn_x: Spawn column.
+            spawn_y: Spawn row.
+            speed: Base travel speed in tiles per second.
+            grid: Active maze grid reference.
+            strategy: Targeting AI strategy instance.
+            pacman: Target Pac-Man entity reference.
+            name: Ghost name.
+            blinky: Optional Blinky reference for flanking AI.
+        """
+        super().__init__(spawn_x, spawn_y, speed, grid, name)
+        self._state: GhostState = GhostState.CHASE
+        self._strategy: GhostStrategy = strategy
+        self._pacman: PacMan = pacman
+        self._blinky: Ghost | None = blinky
+        self._target_tile: tuple[int, int] | None = None
+        self._frightened_time: float = 0.0
 
-	@property
-	def state(self):
-		return self._state
+    @property
+    def is_frighten(self) -> bool:
+        """Check whether the ghost is in frightened fleeing mode.
 
-	@property
-	def target_tile(self):
-		return self._target_tile
+        Returns:
+            bool: True if state is FRIGHTENED.
+        """
+        return self._state is GhostState.FRIGHTENED
 
-	@property
-	def frightened_duration(self):
-		return self._frightened_time if self.is_frighten else None
+    @property
+    def is_frozen(self) -> bool:
+        """Check whether the ghost is currently immobilized.
 
-	def freeze(self):
-		if self.is_frozen:
-			self.desactivate_effect(EntityEffect.FREEZE)
-		else:
-			self.activate_effect(EntityEffect.FREEZE)
+        Returns:
+            bool: True if freeze effect is active or speed is 0.
+        """
+        return self.has_effect(EntityEffect.FREEZE) or self._speed == 0
 
-	def respawn(self):
-		self._x, self._y = self._spawn_x, self._spawn_y
-		self._cur_direction = Direction.NONE
-		self._next_direction = Direction.NONE
-		self._state = GhostState.CHASE
-		self.remove_all_effects()
-		
+    @property
+    def state(self) -> GhostState:
+        """Return the current behavioral state of the ghost.
 
-	def _request_direction(self, blinky=None):
-		if self._next_direction is Direction.NONE or self._target_tile is None or self._target_tile == self.tile or self._grid.is_wall(*self._target_tile):
-			self._next_direction = self._strategy.compute_next_move(
-				self, self._pacman, self._grid, blinky
-			)
-			gx, gy = self.tile
-			self._target_tile = self._next_direction.dx+gx, self._next_direction.dy+gy
+        Returns:
+            GhostState: Current state enum.
+        """
+        return self._state
 
-	def switch_state(self, new_state):
-		self._state = new_state
+    @property
+    def target_tile(self) -> tuple[int, int] | None:
+        """Return the current target tile coordinates.
 
-	def can_eat_pacman(self):
-		return self._pacman == self and not self._pacman.is_invincible and self.state in {GhostState.WANDER, GhostState.CHASE}
+        Returns:
+            tuple[int, int] | None: Target (x, y) or None.
+        """
+        return self._target_tile
 
-	def active_frighten_mode(self, duration):
-		if self.state not in {GhostState.DIED, GhostState.FRIGHTENED}:
-			self.switch_state(GhostState.FRIGHTENED)
-			self._frightened_time = duration
+    @property
+    def frightened_duration(self) -> float | None:
+        """Return remaining seconds of frightened mode if active.
 
-	def update(self, dt):
-		self.check_effect_duration(dt)
-		distance = self._speed * dt
+        Returns:
+            float | None: Remaining duration or None.
+        """
+        return self._frightened_time if self.is_frighten else None
 
+    def freeze(self) -> None:
+        """Toggle freeze cheat effect on or off."""
+        if self.is_frozen:
+            self.desactivate_effect(EntityEffect.FREEZE)
+        else:
+            self.activate_effect(EntityEffect.FREEZE)
 
-		match self._state:
-			case GhostState.FRIGHTENED:
-				self._frightened_time -= dt
-				if self._frightened_time <= 0:
-					self.switch_state(GhostState.CHASE)
-			case GhostState.DIED if self.tile == (self._spawn_x, self._spawn_y):
-				self.switch_state(GhostState.CHASE)
-			case GhostState.DIED:
-				distance = (self._base_speed * dt) * 2
+    def respawn(self) -> None:
+        """Reset ghost position back to its corner and enter CHASE state."""
+        self._x, self._y = self._spawn_x, self._spawn_y
+        self._cur_direction = Direction.NONE
+        self._next_direction = Direction.NONE
+        self._state = GhostState.CHASE
+        self.remove_all_effects()
 
+    def _request_direction(self, blinky: Ghost | None = None) -> None:
+        """Recalculate AI movement direction when reaching target tile.
 
-		if self._pacman.is_invincible and self._state not in {GhostState.WANDER, GhostState.FRIGHTENED}:
-			self.switch_state(GhostState.WANDER)
+        Args:
+            blinky: Optional Blinky reference for flanking.
+        """
+        should_recalc = (
+            self._next_direction is Direction.NONE
+            or self._target_tile is None
+            or self._target_tile == self.tile
+            or self._grid.is_wall(*self._target_tile)
+        )
+        if should_recalc:
+            self._next_direction = self._strategy.compute_next_move(
+                self, self._pacman, self._grid, blinky
+            )
+            gx, gy = self.tile
+            self._target_tile = (
+                self._next_direction.dx + gx,
+                self._next_direction.dy + gy,
+            )
 
-		self._request_direction(self._blinky)
+    def switch_state(self, new_state: GhostState) -> None:
+        """Transition ghost into a new behavioral state.
 
-		self._calc_movement(distance)
+        Args:
+            new_state: New GhostState to transition into.
+        """
+        if self._state != new_state:
+            self._state = new_state
+            log(
+                f"Ghost {self._name} transitioned to {new_state.name}",
+                "Ghost",
+                LogType.INFO,
+            )
+
+    def can_eat_pacman(self) -> bool:
+        """Check whether the ghost can currently eliminate Pac-Man.
+
+        Returns:
+            bool: True if colliding with non-invincible Pac-Man.
+        """
+        return (
+            self._pacman == self
+            and not self._pacman.is_invincible
+            and self.state in {GhostState.WANDER, GhostState.CHASE}
+        )
+
+    def active_frighten_mode(self, duration: float) -> None:
+        """Engage frightened mode for the specified duration.
+
+        Args:
+            duration: Frightened duration in seconds.
+        """
+        if self.state not in {GhostState.DIED, GhostState.FRIGHTENED}:
+            self.switch_state(GhostState.FRIGHTENED)
+            self._frightened_time = duration
+
+    def update(self, dt: float) -> None:
+        """Update ghost timers, manage state transitions, and step position.
+
+        Args:
+            dt: Frame elapsed time in seconds.
+        """
+        self.check_effect_duration(dt)
+        distance = self._speed * dt
+
+        match self._state:
+            case GhostState.FRIGHTENED:
+                self._frightened_time -= dt
+                if self._frightened_time <= 0:
+                    self.switch_state(GhostState.CHASE)
+            case (
+                GhostState.DIED
+            ) if self.tile == (int(self._spawn_x), int(self._spawn_y)):
+                self.switch_state(GhostState.CHASE)
+            case GhostState.DIED:
+                distance = (self._base_speed * dt) * 2
+
+        if (
+            self._pacman.is_invincible
+            and self._state not in {GhostState.WANDER, GhostState.FRIGHTENED}
+        ):
+            self.switch_state(GhostState.WANDER)
+
+        self._request_direction(self._blinky)
+
+        self._calc_movement(distance)
