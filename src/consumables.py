@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Sequence
-from .logs import log, LogType
+from .logger import log, LogType
 
 if TYPE_CHECKING:
     from .engine import GameEngine

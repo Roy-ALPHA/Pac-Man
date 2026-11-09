@@ -11,7 +11,7 @@ from . import consumables
 from .data_dir import DATA_DIR
 from . import entities
 from . import ghost_ai
-from .logs import log, LogType
+from .logger import log, LogType
 from .maze_adapter import MazeAdapter, MazeGrid
 
 
@@ -328,7 +328,7 @@ class GameEngine:
             duration: Duration in seconds.
         """
         for ghost in self._ghosts:
-            ghost.active_frighten_mode(duration)
+            ghost.activate_frightened_mode(duration)
 
     def apply_effect(
         self,

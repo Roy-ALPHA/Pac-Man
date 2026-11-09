@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Any
-from .logs import log, LogType
+from .logger import log, LogType
 
 if TYPE_CHECKING:
     from .ghost_ai import GhostStrategy
@@ -245,7 +245,7 @@ class Entity(ABC):
             LogType.INFO,
         )
 
-    def desactivate_effect(self, effect: EntityEffect) -> None:
+    def deactivate_effect(self, effect: EntityEffect) -> None:
         """Remove an effect and restore stats cleanly.
 
         Args:
@@ -495,7 +495,7 @@ class PacMan(Entity):
         Returns:
             bool: True if colliding with a frightened ghost.
         """
-        return ghost == self and ghost.is_frighten
+        return ghost == self and ghost.is_frightened
 
     def lose_life(self) -> None:
         """Decrement lives count by one if currently alive."""
@@ -520,14 +520,14 @@ class PacMan(Entity):
     def toggle_invincibility(self) -> None:
         """Toggle invincibility cheat effect on or off."""
         if self.has_effect(EntityEffect.INVINCIBILITY):
-            self.desactivate_effect(EntityEffect.INVINCIBILITY)
+            self.deactivate_effect(EntityEffect.INVINCIBILITY)
         else:
             self.activate_effect(EntityEffect.INVINCIBILITY)
 
     def increase_speed(self) -> None:
         """Toggle speed buff cheat effect on or off."""
         if self.has_effect(EntityEffect.SPEED_BUFF):
-            self.desactivate_effect(EntityEffect.SPEED_BUFF)
+            self.deactivate_effect(EntityEffect.SPEED_BUFF)
         else:
             self.activate_effect(EntityEffect.SPEED_BUFF)
 
@@ -589,7 +589,7 @@ class Ghost(Entity):
         self._frightened_time: float = 0.0
 
     @property
-    def is_frighten(self) -> bool:
+    def is_frightened(self) -> bool:
         """Check whether the ghost is in frightened fleeing mode.
 
         Returns:
@@ -631,12 +631,12 @@ class Ghost(Entity):
         Returns:
             float | None: Remaining duration or None.
         """
-        return self._frightened_time if self.is_frighten else None
+        return self._frightened_time if self.is_frightened else None
 
     def freeze(self) -> None:
         """Toggle freeze cheat effect on or off."""
         if self.is_frozen:
-            self.desactivate_effect(EntityEffect.FREEZE)
+            self.deactivate_effect(EntityEffect.FREEZE)
         else:
             self.activate_effect(EntityEffect.FREEZE)
 
@@ -696,7 +696,7 @@ class Ghost(Entity):
             and self.state in {GhostState.WANDER, GhostState.CHASE}
         )
 
-    def active_frighten_mode(self, duration: float) -> None:
+    def activate_frightened_mode(self, duration: float) -> None:
         """Engage frightened mode for the specified duration.
 
         Args:

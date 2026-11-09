@@ -183,7 +183,7 @@ class GhostStrategy(ABC):
         ghost: Ghost,
         pacman: PacMan,
         maze: MazeGrid,
-        binky: Ghost | None = None,
+        blinky: Ghost | None = None,
     ) -> Direction:
         """Compute the ghost's next movement direction based on its state.
 
@@ -191,7 +191,7 @@ class GhostStrategy(ABC):
             ghost: The ghost entity making the move.
             pacman: The Pac-Man player entity.
             maze: The active maze grid.
-            binky: Optional reference to Blinky (used by Inky's algorithm).
+            blinky: Optional reference to Blinky (used by Inky's algorithm).
 
         Returns:
             Direction: Chosen movement direction.
@@ -227,38 +227,38 @@ class BlinkyStrategy(GhostStrategy):
 
     def compute_next_move(
         self,
-        blinky: Ghost,
+        ghost: Ghost,
         pacman: PacMan,
         maze: MazeGrid,
-        binky: Ghost | None = None,
+        blinky: Ghost | None = None,
     ) -> Direction:
         """Calculate Blinky's next move based on current ghost state.
 
         Args:
-            blinky: The Blinky ghost entity.
+            ghost: The Blinky ghost entity.
             pacman: The Pac-Man player entity.
             maze: The active maze grid.
-            binky: Optional reference to Blinky (unused).
+            blinky: Optional reference to Blinky (unused).
 
         Returns:
             Direction: Chosen direction.
         """
-        match blinky.state:
+        match ghost.state:
             case GhostState.CHASE:
-                return self._chase(blinky, pacman, maze)
+                return self._chase(ghost, pacman, maze)
             case GhostState.FRIGHTENED:
-                return self._frighten(blinky, pacman, maze)
+                return self._frighten(ghost, pacman, maze)
             case GhostState.DIED:
                 return self._go_to(
-                    blinky.tile,
-                    blinky.spawn,
-                    blinky.cur_direction.opposite(),
+                    ghost.tile,
+                    ghost.spawn,
+                    ghost.cur_direction.opposite(),
                     maze,
                 )
             case GhostState.WANDER:
                 return self._wander(
-                    blinky.tile,
-                    blinky.cur_direction.opposite(),
+                    ghost.tile,
+                    ghost.cur_direction.opposite(),
                     maze,
                 )
         return Direction.NONE
@@ -302,7 +302,7 @@ class PinkyStrategy(GhostStrategy):
         pinky: Ghost,
         pacman: PacMan,
         maze: MazeGrid,
-        binky: Ghost | None = None,
+        blinky: Ghost | None = None,
     ) -> Direction:
         """Calculate Pinky's next move based on current ghost state.
 
@@ -310,7 +310,7 @@ class PinkyStrategy(GhostStrategy):
             pinky: The Pinky ghost entity.
             pacman: The Pac-Man player entity.
             maze: The active maze grid.
-            binky: Optional reference to Blinky (unused).
+            blinky: Optional reference to Blinky (unused).
 
         Returns:
             Direction: Chosen direction.

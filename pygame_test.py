@@ -28,7 +28,7 @@ from src.engine import GameEngine, EngineState, Cheat
 from src.entities import Direction, GhostState
 from src.consumables import Consumable, SuperPacGum, PacGum
 from src.highscore import HighscoreManager
-from src.logs import warning_manager
+from src.logger import warning_manager
 
 # ==============================================================================
 # Color Palette & Visual Theme
@@ -792,7 +792,7 @@ class PygameTestHarness:
             dist = math.dist(ghost.tile, pacman.tile)
             target_str = f"{ghost.target_tile}" if ghost.target_tile else "None"
             g_line = f"{ghost.name:<9} {ghost.state.name:<11} {str(ghost.tile):<8} {target_str:<8} {dist:4.1f}t"
-            row_col = COLOR_FROZEN if ghost.is_frozen else ((255, 220, 100) if ghost.is_frighten else (220, 225, 235))
+            row_col = COLOR_FROZEN if ghost.is_frozen else ((255, 220, 100) if ghost.is_frightened else (220, 225, 235))
             row_surf = self.font_small.render(g_line, True, row_col)
             self.screen.blit(row_surf, (origin_x + 28, cy))
             cy += 16

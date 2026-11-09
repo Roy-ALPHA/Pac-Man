@@ -118,26 +118,26 @@ class WarningManager:
         cls._spinners += 2
 
     @staticmethod
-    def _gen_titel_spinner(titel: str) -> Spinner:
+    def _gen_title_spinner(title: str) -> Spinner:
         """Generate animated title header spinner with Pac-Man frames.
 
         Args:
-            titel: Category title string.
+            title: Category title string.
 
         Returns:
             Spinner: Constructed Rich Spinner.
         """
-        if titel not in SPINNERS:
+        if title not in SPINNERS:
             width = 98
-            title = f"{Fore.LIGHTCYAN_EX}[{titel}]{Fore.RESET}"
+            title_text = f"{Fore.LIGHTCYAN_EX}[{title}]{Fore.RESET}"
 
-            if len(title) > width:
-                title = title[:width]
+            if len(title_text) > width:
+                title_text = title_text[:width]
 
             line = ["•" if i % 2 else " " for i in range(width)]
 
-            start = (width - len(title)) // 2
-            line[start:start + len(title)] = title
+            start = (width - len(title_text)) // 2
+            line[start:start + len(title_text)] = title_text
 
             frames = []
             pacman_frames = "Cc"
@@ -150,7 +150,7 @@ class WarningManager:
                 left = i
                 right = width - 1 - i
 
-                if left < start or left >= start + len(title):
+                if left < start or left >= start + len(title_text):
                     color_p = (
                         Fore.LIGHTYELLOW_EX
                         + pacman_frames[i % len(pacman_frames)]
@@ -161,7 +161,7 @@ class WarningManager:
                 if left > 0:
                     line[left - 1] = " "
 
-                if right < start or right >= start + len(title):
+                if right < start or right >= start + len(title_text):
                     color_r = (
                         Fore.LIGHTYELLOW_EX
                         + rotated_pacman[i % len(rotated_pacman)]
@@ -176,14 +176,14 @@ class WarningManager:
                     Style.BRIGHT + "  " + "".join(line) + Style.RESET_ALL
                 )
 
-            SPINNERS[titel] = {
+            SPINNERS[title] = {
                 "interval": 50,
                 "frames": frames,
             }
 
-        return Spinner(titel, speed=0.5)
+        return Spinner(title, speed=0.5)
 
-    def stope(self) -> None:
+    def stop(self) -> None:
         """Signal stop event, join background thread, and close log file."""
         self._stop_event.set()
         if self._worker.is_alive():
@@ -300,47 +300,43 @@ class WarningManager:
     def log(
         self,
         msg: str,
-        titel: str = "Warning",
+        title: str = "Warning",
         log_type: LogType = LogType.WARNING,
     ) -> None:
         """Record and display a log message.
 
         Args:
             msg: The message content to log.
-            titel: Component or context category.
+            title: Component or context category.
             log_type: Log severity type (WARNING or INFO).
         """
-        self._save_log(msg, titel, log_type)
+        self._save_log(msg, title, log_type)
         with self._lock:
-            poped_box = None
-            if titel in self._tables:
-                poped_box = self._tables[titel].pop()
+            popped_box = None
+            if title in self._tables:
+                popped_box = self._tables[title].pop()
             else:
-                self._tables[titel] = [
+                self._tables[title] = [
                     Spinner("b_top"),
-                    self._gen_titel_spinner(titel),
+                    self._gen_title_spinner(title),
                     "",
                 ]
 
-            spinners_counter = len(self._tables[titel]) - 1
+            spinners_counter = len(self._tables[title]) - 1
 
             if spinners_counter // 2 >= 10:
-                self._tables[titel] = [
+                self._tables[title] = [
                     Spinner("b_top"),
-                    self._gen_titel_spinner(titel),
+                    self._gen_title_spinner(title),
                     "",
                 ]
 
-            fallback_box = poped_box if poped_box else Spinner("b_bottom")
-            self._tables[titel].extend([
+            fallback_box = popped_box if popped_box else Spinner("b_bottom")
+            self._tables[title].extend([
                 self._gen_line_spinner(msg, log_type),
                 "",
                 fallback_box,
             ])
-
-    def stop(self) -> None:
-        """Stop the background animation loop."""
-        self.stope()
 
     def _get_spinners(self) -> Group:
         """Aggregate all active spinners into a Rich renderable Group.

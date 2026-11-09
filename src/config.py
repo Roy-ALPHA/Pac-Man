@@ -8,7 +8,7 @@ from pathlib import Path
 import random
 from typing import Any
 from lark import Lark, Token
-from .logs import log, LogType
+from .logger import log, LogType
 from .maze_adapter import MazeAdapter
 
 

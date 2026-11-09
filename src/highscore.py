@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 import re
-from .logs import log, LogType
+from .logger import log, LogType
 
 
 class HighscoreManager:

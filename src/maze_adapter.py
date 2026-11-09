@@ -8,7 +8,7 @@ from typing import Any
 from mazegenerator import MazeGenerator
 from .consumables import Consumable
 from .entities import PRIORITY_DIRECTIONS
-from .logs import log, LogType
+from .logger import log, LogType
 
 
 class CellType(Enum):
