@@ -18,7 +18,7 @@ class MainMenuScreen(Screen):
 
         self._logo = self._load_img("main_mn/logo.png")
         self._logo_pos = (self.middle_w - 405, self.middle_h - 300)
-        
+
         self.can_continue = False  # set by GameStateManager
         self._font = pygame.font.Font(None, 50)
         self._continue_rect = pygame.Rect(20, self.screen_h - 70, 260, 50)
@@ -31,7 +31,8 @@ class MainMenuScreen(Screen):
 
         for key, (file, y_offset, _) in self.BUTTONS.items():
             image = self._load_img(f"main_mn/{file}")
-            hover = self._load_img(f"main_mn/{file.replace('.png', '_hover.png')}")
+            hover = self._load_img("main_mn/"
+                                   f"{file.replace('.png', '_hover.png')}")
             rect = image.get_rect(midtop=(self.middle_w,
                                           self.middle_h + y_offset))
             self._buttons[key] = (image, hover, rect)
@@ -84,7 +85,7 @@ class MainMenuScreen(Screen):
         for key, (image, hover, rect) in self._buttons.items():
             render.blit_window(hover if key == hovered else image,
                                rect.topleft)
-        
+
         if self.can_continue:
             hover = self._continue_rect.collidepoint(pygame.mouse.get_pos())
             color = 'white' if hover else 'yellow'

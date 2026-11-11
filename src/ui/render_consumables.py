@@ -1,5 +1,7 @@
-import pygame
 from ..consumables import SuperPacGum
+from ..maze_adapter import MazeGrid
+from src.ui.render_maze import RenderMaze
+import pygame
 
 
 class RenderConsumables:
@@ -17,7 +19,7 @@ class RenderConsumables:
         self._sheets: list[pygame.Surface] = []
         self._style = 0
 
-    def prepare(self, maze_render) -> None:
+    def prepare(self, maze_render: RenderMaze) -> None:
         self._tile = maze_render.tile
         self._off_x = maze_render.off_x
         self._off_y = maze_render.off_y
@@ -28,7 +30,7 @@ class RenderConsumables:
             self._sheets.append(pygame.transform.scale(
                 image, (self._frames * self._tile, 2 * self._tile)))
 
-    def render(self, maze, change_style: bool) -> None:
+    def render(self, maze: MazeGrid, change_style: bool) -> None:
         if change_style:
             self._style = (self._style + 1) % len(self._sheets)
 

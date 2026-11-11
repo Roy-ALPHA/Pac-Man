@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Iterable, Optional
 import pygame
 from .render_maze import RenderMaze
 from .render_consumables import RenderConsumables
@@ -24,9 +24,9 @@ class Renderer:
         self._consumables_renderer = RenderConsumables(self._screen)
         self._player_renderer = RenderPlayer(self._screen)
         self._ghost_renderer = RenderGhost(self._screen)
-        self._maze = None
+        self._maze: Optional[Any] = None
 
-    def render_maze(self, maze, change_style: bool) -> None:
+    def render_maze(self, maze: Any, change_style: bool) -> None:
 
         if self._maze is not maze:
             self._maze = maze
@@ -48,7 +48,8 @@ class Renderer:
         rect = (image.get_rect(center=pos) if center
                 else image.get_rect(topleft=pos))
         self._screen.blit(image, rect)
-    def render_entities(self, player, ghosts) -> None:
+
+    def render_entities(self, player: Any, ghosts: Iterable[Any]) -> None:
         self._player_renderer.render(player)
         self._ghost_renderer.render(ghosts)
 
@@ -78,9 +79,9 @@ class Renderer:
     def update_display(self) -> None:
         pygame.display.flip()
 
-    def draw_door(self, x: int, door_w: int) -> None:
+    def draw_door(self, x: float, door_w: float) -> None:
         pygame.draw.rect(self._screen, 'yellow', (x, 0, door_w, self._height))
 
     def blit_window(self, to_draw: Any, coord: tuple[int, int],
-                    area=None) -> None:
+                    area: Optional[pygame.Rect] = None) -> None:
         self._screen.blit(to_draw, coord, area)

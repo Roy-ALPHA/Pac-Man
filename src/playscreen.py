@@ -1,3 +1,4 @@
+from typing import Any
 from src.ui.screen import Screen
 from src.ui.renderer import Renderer
 from src.ui.inputhandler import InputCommand
@@ -13,44 +14,44 @@ import pygame
 class PlayEngine(GameEngine):
 
     @property
-    def is_level_loaded(self):
-        return self._is_level_loaded
+    def is_level_loaded(self) -> bool:
+        return bool(self._is_level_loaded)
 
     @property
-    def grid(self):
+    def grid(self) -> Any:
         return self._grid
 
     @property
-    def pacman(self):
+    def pacman(self) -> Any:
         return self._pacman
 
     @property
-    def ghosts(self):
+    def ghosts(self) -> Any:
         return self._ghosts
 
     @property
-    def lives(self):
+    def lives(self) -> Any:
         return self._pacman.lives
 
     @property
-    def level(self):
+    def level(self) -> Any:
         return self._cur_level
 
     @property
-    def max_level(self):
+    def max_level(self) -> int:
         return 10
 
     @property
-    def time_left(self):
+    def time_left(self) -> Any:
         return max(0, self._level_time)
 
-    def save(self):
+    def save(self) -> bool:
         return self._save_states()
 
-    def load(self):
+    def load(self) -> bool:
         return self._load_states()
 
-    def delete_save(self):
+    def delete_save(self) -> None:
         (DATA_DIR / "pacman_states.json").unlink(missing_ok=True)
 
 
@@ -179,10 +180,10 @@ class PlayScreen(Screen):
         if command.toggle_cheats or clicked == self.CHEATS_BUTTON:
             self._cheats_on = not self._cheats_on
 
-        name = None
+        name: str | None = None
         if command.cheat:
             name = list(self.CHEATS)[command.cheat - 1]
-        elif clicked in self.CHEATS:
+        elif clicked is not None and clicked in self.CHEATS:
             name = clicked
 
         if name and self._cheats_on and self._engine.is_level_loaded:
@@ -199,13 +200,14 @@ class PlayScreen(Screen):
         if cheat in self.ONE_SHOT:
             self._flash[name] = self.FLASH_MS
 
-    def _handle_pause(self, command: InputCommand, clicked: str | None) -> None:
+    def _handle_pause(self, command: InputCommand,
+                      clicked: str | None) -> None:
 
         if clicked == "Resume":
             self._toggle_pause()
         elif clicked == "Save Game":
             saved = self.save_game()
-            self._message = "Game saved" if saved else "Could not save the game"
+            self._message = "Game saved" if saved else "Could not save"
         elif clicked == "Main Menu":
             command.back = True
 
@@ -246,7 +248,7 @@ class PlayScreen(Screen):
             else:
                 self._message = message
 
-    def update(self, dt: int) -> None:
+    def update(self, dt: float) -> None:
 
         if self._game_ended() and not self._save_cleared:
             if self._owns_save:
@@ -388,9 +390,9 @@ class PlayScreen(Screen):
         pacman = self._engine.pacman
 
         if cheat is Cheat.INVINCIBILITY:
-            return pacman.is_invincible
+            return bool(pacman.is_invincible)
         if cheat is Cheat.INCREASE_SPEED:
-            return pacman.speed > self._config.pacman_speed
+            return bool(pacman.speed > self._config.pacman_speed)
         if cheat is Cheat.GHOST_FREEZE:
             return any(ghost.is_frozen for ghost in self._engine.ghosts)
 
@@ -454,12 +456,16 @@ class PlayScreen(Screen):
 
     def _draw_question(self, render: Renderer) -> None:
 
+        question = self._question
+        if question is None:
+            return
+
         mid_w, mid_h = self.middle_w, self.middle_h
 
         render.blit_window(self._overlay, (0, 0))
         render.blit_window(self._panel,
                            self._panel.get_rect(center=(mid_w, mid_h)).topleft)
-        render.draw_text(self._font, self.QUESTIONS[self._question],
+        render.draw_text(self._font, self.QUESTIONS[question],
                          'white', (mid_w, mid_h - 60))
         self._draw_buttons(render, self._buttons(), self._font)
         render.draw_text(self._small_font, self._message, 'red',

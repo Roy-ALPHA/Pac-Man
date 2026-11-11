@@ -1,3 +1,4 @@
+from typing import Any
 import pygame
 from ..maze_adapter import CellType
 
@@ -39,7 +40,7 @@ class RenderMaze:
     def off_y(self) -> int:
         return self._off_y
 
-    def prepare(self, maze) -> None:
+    def prepare(self, maze: Any) -> None:
         self._tile = min(self._width // maze.width,
                          self._height // maze.height)
         self._off_x = (self._width - self._tile * maze.width) // 2
@@ -60,11 +61,16 @@ class RenderMaze:
         if change_style:
             self._style = (self._style + 1) % len(self._wall_sheets)
 
+        logo_sheet = self._logo_sheet
+        if logo_sheet is None:
+            return
+
         t = self._tile
         time = pygame.time.get_ticks() * self._fps // 1000
 
         for x, y, mask, is_logo in self._walls:
-            sheet = self._logo_sheet if is_logo else self._wall_sheets[self._style]
+            sheet = logo_sheet if is_logo else self._wall_sheets[
+                self._style]
             frame = (time + x + y) % self._frames
             area = pygame.Rect((mask % 16) * t, (frame * 16 + mask // 16) * t,
                                t, t)
@@ -76,7 +82,7 @@ class RenderMaze:
         t = self._tile
         return pygame.transform.scale(image, (16 * t, 16 * t * self._frames))
 
-    def _get_mask(self, maze, cell) -> int:
+    def _get_mask(self, maze: Any, cell: Any) -> int:
         mask = 0
         for value, dx, dy in self.NEIGHBORS:
             x, y = cell.x + dx, cell.y + dy

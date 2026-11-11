@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from src.ui.inputhandler import InputCommand
 from src.ui.screen import Screen
 from src.ui.renderer import Renderer
@@ -11,7 +13,7 @@ from .data_dir import DATA_DIR
 
 class GameStateManager:
 
-    def __init__(self, config) -> None:
+    def __init__(self, config: Any) -> None:
 
         self._config = config
         self._highscores = HighscoreManager(DATA_DIR / "highscores.json")
@@ -23,12 +25,15 @@ class GameStateManager:
         }
 
     def handle_input(self, command: InputCommand) -> None:
+        assert self._active_screen is not None
         self._active_screen.handle_input(command)
 
     def update(self, dt: float) -> None:
+        assert self._active_screen is not None
         self._active_screen.update(dt)
 
     def render(self, render: Renderer) -> None:
+        assert self._active_screen is not None
         self._active_screen.render(render)
 
     def save_game(self) -> None:
@@ -47,7 +52,9 @@ class GameStateManager:
             screen = PlayScreen(self._config, self._highscores, load=True)
 
             if not screen.loaded:
-                self._screens['main_menu'].show_message("No game to resume")
+                cast(MainMenuScreen,
+                     self._screens['main_menu']).show_message(
+                         "No game to resume")
                 return
 
             self._screens['play'] = screen

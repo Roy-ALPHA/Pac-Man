@@ -1,4 +1,49 @@
+from typing import Iterable, Optional, Protocol
 import pygame
+
+
+class _MazeRender(Protocol):
+    @property
+    def tile(self) -> int: ...
+
+    @property
+    def off_x(self) -> int: ...
+
+    @property
+    def off_y(self) -> int: ...
+
+
+class _Direction(Protocol):
+    @property
+    def dx(self) -> int: ...
+
+    @property
+    def dy(self) -> int: ...
+
+
+class _State(Protocol):
+    @property
+    def name(self) -> str: ...
+
+
+class _Ghost(Protocol):
+    @property
+    def x(self) -> float: ...
+
+    @property
+    def y(self) -> float: ...
+
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def state(self) -> _State: ...
+
+    @property
+    def cur_direction(self) -> _Direction: ...
+
+    @property
+    def frightened_duration(self) -> Optional[float]: ...
 
 
 class RenderGhost:
@@ -16,7 +61,7 @@ class RenderGhost:
         self._off_y = 0
         self._sheets: dict[str, pygame.Surface] = {}
 
-    def prepare(self, maze_render) -> None:
+    def prepare(self, maze_render: _MazeRender) -> None:
         self._tile = maze_render.tile
         self._off_x = maze_render.off_x
         self._off_y = maze_render.off_y
@@ -26,7 +71,7 @@ class RenderGhost:
         self._sheets["eyes"] = self._load("ghost_eyes.png", 4)
         self._sheets["scared"] = self._load("ghost_frightened.png", 2)
 
-    def render(self, ghosts) -> None:
+    def render(self, ghosts: Iterable[_Ghost]) -> None:
         if not self._sheets:
             return
 
@@ -47,9 +92,9 @@ class RenderGhost:
         return pygame.transform.scale(
             image, (self._frames * self._tile, rows * self._tile))
 
-    def _pick_sprite(self, ghost, ms: int) -> tuple[pygame.Surface, int]:
+    def _pick_sprite(self, ghost: _Ghost,
+                     ms: int) -> tuple[pygame.Surface, int]:
         state = ghost.state.name
-
 
         if state == "FRIGHTENED":
             left = ghost.frightened_duration

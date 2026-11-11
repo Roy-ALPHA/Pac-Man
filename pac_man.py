@@ -14,7 +14,7 @@ class PacmanApp:
                'show_highscores': 'highscores',
                'show_instructions': 'instructions', 'back': 'main_menu'}
 
-    def __init__(self, config, w: int, h: int) -> None:
+    def __init__(self, config: Config, w: int, h: int) -> None:
 
         self.is_running: bool = True
         self.renderer = Renderer(w, h)
@@ -59,6 +59,6 @@ if __name__ == "__main__":
         config = Config().from_file(Path(config_file))
         pac_man = PacmanApp(config, 1200, 800)
         pac_man.run()
-    
+
     except KeyboardInterrupt:
         pass

@@ -1,3 +1,4 @@
+from typing import Any
 import pygame
 
 
@@ -17,7 +18,7 @@ class RenderPlayer:
         self._off_y = 0
         self._row = 0
 
-    def prepare(self, maze_render) -> None:
+    def prepare(self, maze_render: Any) -> None:
         self._tile = maze_render.tile
         self._off_x = maze_render.off_x
         self._off_y = maze_render.off_y
@@ -26,7 +27,10 @@ class RenderPlayer:
         self._sheet = pygame.transform.scale(
             sheet, (self._frames * self._tile, 4 * self._tile))
 
-    def render(self, player) -> None:
+    def render(self, player: Any) -> None:
+
+        if self._sheet is None:
+            return
 
         if player.is_invincible and (pygame.time.get_ticks() // 150) % 2:
             return

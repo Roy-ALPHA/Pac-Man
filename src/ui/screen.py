@@ -6,7 +6,7 @@ import pygame
 
 class Screen(ABC):
 
-    door_w = 0
+    door_w = 0.0
     screen_w = 0
     screen_h = 0
     door_closed = False
