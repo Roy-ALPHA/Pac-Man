@@ -5,6 +5,7 @@ from src.ui.screen import Screen
 from src.config import Config
 from pathlib import Path
 import pygame
+import sys
 
 
 class PacmanApp:
@@ -52,6 +53,12 @@ class PacmanApp:
 
 if __name__ == "__main__":
 
-    config = Config().from_file(Path("config.json"))
-    pac_man = PacmanApp(config, 1200, 800)
-    pac_man.run()
+    config_file: str = sys.argv[1] if len(sys.argv) > 1 else "No_file"
+
+    try:
+        config = Config().from_file(Path(config_file))
+        pac_man = PacmanApp(config, 1200, 800)
+        pac_man.run()
+    
+    except KeyboardInterrupt:
+        pass
