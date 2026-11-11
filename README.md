@@ -255,6 +255,8 @@ PacmanApp
 - **One adapter for the maze package**, so the generation library is used in a single place.
 - **Rules live in one config object**, which is also saved with the game so a resumed game keeps the same rules.
 
+For formal Mermaid UML class diagrams, state machines, and sequence diagrams, see [**UML Architecture & System Specifications**](./project_management/uml_architecture.md).
+
 ## Resources
 
 **References**
@@ -273,7 +275,15 @@ AI Was used to create readme file, also to understand better some concepts and p
 
 ## Project Management
 
-- **Team and roles:** yoelboud worked on the game logic (engine, entities, ghost AI, configuration, highscore manager); abchtaib worked on the user interface (screens, renderers, input, HUD, menus). *(Edit to match your team.)*
-- **Organization:** the work was split by module, and each part was connected through small public interfaces (`InputCommand`, `Screen`, the public properties of the engine), so both people could work at the same time with few conflicts.
-- **Tools:** Git for version control, `uv` for dependencies.
-- **Project management directory:** [`project_management/`](./project_management/)
+- **Team and roles:** **yoelboud** was responsible for the core game logic (simulation engine, entity state machines, BFS ghost AI, configuration parsing with comments, and persistent state serialization); **abchtaib** was responsible for the user interface and rendering (Pygame-ce display pipeline, procedural maze autotiling bitmask, sprite animations, input command handling, HUD, and interactive screens).
+- **Organization:** The project applied an adapted Scrumban methodology over an 8-week delivery timeline (Sept 17 – Nov 11, 2026). Development was partitioned along strict Model-View-Controller (MVC) boundaries, communicating exclusively through typed public interfaces (`InputCommand`, `Screen`, `PlayEngine`).
+- **Tools:** Git & GitHub for version control and issue tracking, `uv` for reproducible environments and dependency locking, `flake8` and strict `mypy` for quality assurance.
+- **Dedicated Project Management Directory:** [`project_management/`](./project_management/)
+  - [**Team Organization & Governance**](./project_management/team_organization.md): Roles, RACI matrix, communication channels, and decision-making framework.
+  - [**Timeline, Gantt Chart & Kanban**](./project_management/timeline_and_gantt.md): Planned vs. actual milestones, Mermaid Gantt schedule, and Kanban board snapshots.
+  - [**Actual Progress Tracking**](./project_management/progress_tracking.md): Schedule variance analysis, milestone burn-up, and Git commit anchors.
+  - [**Project Analysis & Choices**](./project_management/project_analysis_and_choices.md): Technical trade-offs (MVC decoupling, BFS vs A*, 8-neighbor bitmask autotiling, Lark comment parsing, PlatformDirs).
+  - [**Risk Analysis & Mitigation**](./project_management/risk_management.md): Probability-impact matrix, contingency plans, and post-mortem evaluation of materialized risks.
+  - [**Acceptance Test Plan & Bug Fix Log**](./project_management/acceptance_test_plan.md): 28-point functional test suite against 42 specifications and verified defect resolution log.
+  - [**Blocking Points & Conflict Resolution**](./project_management/blocking_points_and_conflicts.md): Post-mortem of technical bottlenecks (off-center tile freeze, model leaks, git merges) and mediation protocols.
+  - [**UML Architecture & Design Specifications**](./project_management/uml_architecture.md): Formal Mermaid UML class diagram, component boundaries, engine/ghost state machines, and frame loop sequence diagram.
