@@ -12,7 +12,7 @@ debug:
 	@uv run python -m pdb pac_man.py $(config_file)
 
 clean:
-	@rm -rf __pycache__ src/__pycache__ src/ui/__pycache__
+	@rm -rf __pycache__ .mypy_cache src/__pycache__ src/ui/__pycache__
 
 lint:
 	@uv run flake8 .
