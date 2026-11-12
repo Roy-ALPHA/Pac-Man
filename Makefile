@@ -1,3 +1,5 @@
+export UV_SKIP_WHEEL_FILENAME_CHECK = 1
+
 config_file = config.json
 
 install:
@@ -13,5 +15,5 @@ clean:
 	@rm -rf __pycache__ src/__pycache__ src/ui/__pycache__
 
 lint:
-	@flake8 .
-	@mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
+	@uv run flake8 .
+	@uv run mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs

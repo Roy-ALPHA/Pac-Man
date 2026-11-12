@@ -168,8 +168,8 @@ class Config:
         tree = Lark(grammar, parser="lalr").parse(raw)
 
         return "".join(
-            child.value if isinstance(child, Token) else str(child)
-            for child in tree.children
+            child.value
+            for child in tree.children if isinstance(child, Token)
         )
 
     @staticmethod
