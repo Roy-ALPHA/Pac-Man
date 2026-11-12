@@ -3,6 +3,7 @@ from src.ui.inputhandler import InputHandler
 from src.ui.renderer import Renderer
 from src.ui.screen import Screen
 from src.config import Config
+from src.logger import warning_manager
 from pathlib import Path
 import pygame
 import sys
@@ -56,9 +57,13 @@ if __name__ == "__main__":
     config_file: str = sys.argv[1] if len(sys.argv) > 1 else "No_file"
 
     try:
+        warning_manager.start()
         config = Config().from_file(Path(config_file))
         pac_man = PacmanApp(config, 1200, 800)
         pac_man.run()
 
     except KeyboardInterrupt:
         pass
+
+    finally:
+        warning_manager.stop()

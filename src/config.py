@@ -165,7 +165,7 @@ class Config:
             %import common.ESCAPED_STRING
         """
 
-        tree = Lark(grammar, parser="earley").parse(raw)
+        tree = Lark(grammar, parser="lalr").parse(raw)
 
         return "".join(
             child.value if isinstance(child, Token) else str(child)

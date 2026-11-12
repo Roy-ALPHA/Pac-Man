@@ -8,11 +8,7 @@ from colorama import Fore, Style
 from rich.console import Group
 from rich.live import Live
 from rich.spinner import SPINNERS, Spinner
-
-try:
-    from .data_dir import DATA_DIR
-except ImportError:
-    from data_dir import DATA_DIR  # type: ignore[no-redef]
+from .data_dir import LOGS_DIR
 
 
 class LogType(Enum):
@@ -57,7 +53,7 @@ class WarningManager:
         self._stop_event = threading.Event()
         self._worker = threading.Thread(target=self._warn)
         self._tables: dict[str, list[Any]] = {}
-        self._log_path = DATA_DIR / "logs.txt"
+        self._log_path = LOGS_DIR / "logs.txt"
         self._logs_file = open(self._log_path, "w", encoding="utf-8")
         WarningManager._gen_box(100)
 
