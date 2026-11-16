@@ -444,8 +444,7 @@ class ClydeStrategy(GhostStrategy):
 
         if dist > 8:
             target = pacman.tile
-
-        if clyde.tile == clyde.spawn:
+        elif clyde.tile == clyde.spawn or dist < 8:
             return self._wander(
                 clyde.tile, clyde.cur_direction.opposite(), maze
             )
