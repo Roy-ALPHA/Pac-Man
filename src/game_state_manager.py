@@ -8,7 +8,6 @@ from src.ui.highscore_screen import HighscoreScreen
 from src.main_menu_screen import MainMenuScreen
 from src.playscreen import PlayScreen
 from src.highscore import HighscoreManager
-from .data_dir import DATA_DIR
 
 
 class GameStateManager:
@@ -16,7 +15,7 @@ class GameStateManager:
     def __init__(self, config: Any) -> None:
 
         self._config = config
-        self._highscores = HighscoreManager(DATA_DIR / "highscores.json")
+        self._highscores = HighscoreManager()
         self._active_screen: Screen | None = None
         self._screens: dict[str, Screen] = {
             'main_menu': MainMenuScreen(),

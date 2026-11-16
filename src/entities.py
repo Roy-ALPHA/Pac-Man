@@ -57,7 +57,7 @@ class Direction(Enum):
         """
         return self.value[1]
 
-    def opposite(self) -> "Direction":
+    def opposite(self) -> Direction:
         """Return the opposite direction vector.
 
         Returns:
@@ -725,7 +725,9 @@ class Ghost(Entity):
             ) if self.tile == (int(self._spawn_x), int(self._spawn_y)):
                 self.switch_state(GhostState.CHASE)
             case GhostState.DIED:
-                distance = (self._base_speed * dt) * 2
+                distance = (self._base_speed * dt) * 5
+            case GhostState.WANDER if not self._pacman.is_invincible:
+                self.switch_state(GhostState.CHASE)
 
         if (
             self._pacman.is_invincible

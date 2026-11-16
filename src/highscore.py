@@ -1,21 +1,21 @@
 """Leaderboard and highscore manager for persisting player scores."""
 
 import json
-from pathlib import Path
 import re
 from .logger import log, LogType
+from .data_dir import DATA_DIR
 
 
 class HighscoreManager:
     """Manages loading, validating, and persisting highscores to disk."""
 
-    def __init__(self, highscore_file: Path) -> None:
+    def __init__(self) -> None:
         """Initialize the highscore manager from a JSON file.
 
         Args:
             highscore_file: Path to the JSON highscores file.
         """
-        self._file_path = highscore_file
+        self._file_path = DATA_DIR / "highscores.json"
         self._scores: dict[str, int] = {}
 
         if (

@@ -5,10 +5,11 @@ from pathlib import Path
 import threading
 from typing import Any
 from colorama import Fore, Style
-from rich.console import Group
+from rich.console import Group, Console
 from rich.live import Live
 from rich.spinner import SPINNERS, Spinner
 from .data_dir import LOGS_DIR
+from collections import deque
 
 
 class LogType(Enum):
@@ -52,7 +53,7 @@ class WarningManager:
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
         self._worker = threading.Thread(target=self._warn)
-        self._tables: dict[str, list[Any]] = {}
+        self._tables = deque([])
         self._log_path = LOGS_DIR / "logs.txt"
         self._logs_file = open(self._log_path, "w", encoding="utf-8")
         WarningManager._gen_box(100)
@@ -125,7 +126,7 @@ class WarningManager:
         """
         if title not in SPINNERS:
             width = 98
-            title_text = f"{Fore.LIGHTCYAN_EX}[{title}]{Fore.RESET}"
+            title_text = f"[{title}]"
 
             if len(title_text) > width:
                 title_text = title_text[:width]
@@ -133,43 +134,44 @@ class WarningManager:
             line = ["•" if i % 2 else " " for i in range(width)]
 
             start = (width - len(title_text)) // 2
-            line[start:start + len(title_text)] = title_text
+            end = start + len(title_text)
+            line[start:end] = list(title_text)
 
             frames = []
             pacman_frames = "Cc"
             rotated_pacman = "Ɔɔ"
+            colored_title = f"{Fore.LIGHTCYAN_EX}{title_text}{Fore.RESET}"
 
             for i in range(width // 2):
-                if line[i] == "[":
-                    break
-
                 left = i
                 right = width - 1 - i
 
-                if left < start or left >= start + len(title_text):
-                    color_p = (
-                        Fore.LIGHTYELLOW_EX
-                        + pacman_frames[i % len(pacman_frames)]
-                        + Fore.RESET
-                    )
-                    line[left] = color_p
+                if line[left] == "[" or line[right] == "]":
+                    break
 
+                line[left] = (
+                    Fore.LIGHTYELLOW_EX
+                    + pacman_frames[i % len(pacman_frames)]
+                    + Fore.RESET
+                )
                 if left > 0:
                     line[left - 1] = " "
 
-                if right < start or right >= start + len(title_text):
-                    color_r = (
-                        Fore.LIGHTYELLOW_EX
-                        + rotated_pacman[i % len(rotated_pacman)]
-                        + Fore.RESET
-                    )
-                    line[right] = color_r
-
+                line[right] = (
+                    Fore.LIGHTYELLOW_EX
+                    + rotated_pacman[i % len(rotated_pacman)]
+                    + Fore.RESET
+                )
                 if right < width - 1:
                     line[right + 1] = " "
 
+                rendered_line = (
+                    "".join(line[:start])
+                    + colored_title
+                    + "".join(line[end:])
+                )
                 frames.append(
-                    Style.BRIGHT + "  " + "".join(line) + Style.RESET_ALL
+                    f"{Style.BRIGHT}  {rendered_line}{Style.RESET_ALL}"
                 )
 
             SPINNERS[title] = {
@@ -184,17 +186,15 @@ class WarningManager:
         self._stop_event.set()
         if self._worker.is_alive():
             self._worker.join(timeout=1.0)
-        try:
-            if not self._logs_file.closed:
-                self._logs_file.close()
-        except Exception:
-            pass
+
+        self._logs_file.close()
 
     def _warn(self) -> None:
         """Worker loop that drives live terminal spinner animations."""
         with Live(
             self._get_spinners(),
             refresh_per_second=15,
+            console=Console(stderr=True),
             vertical_overflow="visible",
             transient=True,
         ) as animation:
@@ -293,58 +293,28 @@ class WarningManager:
         print(log, file=self._logs_file)
         self._logs_file.flush()
 
-    def log(
-        self,
-        msg: str,
-        title: str = "Warning",
-        log_type: LogType = LogType.WARNING,
-    ) -> None:
-        """Record and display a log message.
-
-        Args:
-            msg: The message content to log.
-            title: Component or context category.
-            log_type: Log severity type (WARNING or INFO).
-        """
+    def log(self, msg, title, log_type):
         self._save_log(msg, title, log_type)
         with self._lock:
-            popped_box = None
-            if title in self._tables:
-                popped_box = self._tables[title].pop()
-            else:
-                self._tables[title] = [
-                    Spinner("b_top"),
-                    self._gen_title_spinner(title),
-                    "",
-                ]
-
-            spinners_counter = len(self._tables[title]) - 1
-
-            if spinners_counter // 2 >= 10:
-                self._tables[title] = [
-                    Spinner("b_top"),
-                    self._gen_title_spinner(title),
-                    "",
-                ]
-
-            fallback_box = popped_box if popped_box else Spinner("b_bottom")
-            self._tables[title].extend([
+            log = [
+                Spinner("b_top"),
+                self._gen_title_spinner(title),
                 self._gen_line_spinner(msg, log_type),
-                "",
-                fallback_box,
-            ])
+                Spinner("b_bottom"),
+                ""
+            ]
+            self._tables.append(log)
+
+            spinners_counter = len(self._tables)
+
+            if spinners_counter == 11:
+                self._tables.popleft()
 
     def _get_spinners(self) -> Group:
-        """Aggregate all active spinners into a Rich renderable Group.
-
-        Returns:
-            Group: Unified renderable console group.
-        """
         with self._lock:
             all_spinners = []
-            for spinners in self._tables.values():
+            for spinners in self._tables:
                 all_spinners.extend(spinners)
-
             return Group(*all_spinners)
 
     def start(self) -> None:

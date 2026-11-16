@@ -9,6 +9,7 @@ from mazegenerator import MazeGenerator
 from .consumables import Consumable
 from .entities import PRIORITY_DIRECTIONS
 from .logger import log, LogType
+from collections import deque
 
 
 class CellType(Enum):
@@ -121,11 +122,11 @@ class MazeGrid:
         y = max(1, min(coor[1], self.height - 2))
         coor = (x, y)
 
-        queue = [coor]
+        queue = deque([coor])
         visited = {coor}
 
         while queue:
-            cx, cy = queue.pop(0)
+            cx, cy = queue.popleft()
 
             for d in PRIORITY_DIRECTIONS:
                 n_x, n_y = cx + d.dx, cy + d.dy
