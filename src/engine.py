@@ -109,7 +109,7 @@ class GameEngine:
             case Cheat.GHOST_FREEZE:
                 for ghost in self._ghosts:
                     ghost.freeze()
-        log(f"Cheat activated: {cheat.name}", "Engine", LogType.INFO)
+        log(f"Cheat: {cheat.name}", "Engine", LogType.INFO)
 
     def _calculate_level_max_time(self) -> float:
         """Calculate the level countdown timer based on pellet count.
@@ -137,8 +137,7 @@ class GameEngine:
         self._grid = self._maze_adapter.generate_maze(levelconfig)
         self._levelconfig = levelconfig
         log(
-            f"Level {self._cur_level} loaded with seed "
-            f"{self._levelconfig.seed}",
+            f"Level {self._cur_level} loaded (seed {self._levelconfig.seed})",
             "Engine",
             LogType.INFO,
         )
@@ -150,22 +149,19 @@ class GameEngine:
         }
         center = (self._grid.width // 2, self._grid.height // 2)
 
-        try:
-            self._pacman = entities.PacMan(
-                *self._grid.find_nearest_corridor(center),
-                self._config.pacman_speed,
-                self._grid,
-                self._pacman.lives,
-                "pacman",
-            )
-        except AttributeError:
-            self._pacman = entities.PacMan(
-                *self._grid.find_nearest_corridor(center),
-                self._config.pacman_speed,
-                self._grid,
-                self._config.lives,
-                "pacman",
-            )
+        lives = (
+            self._pacman.lives
+            if hasattr(self, "_pacman")
+            else self._config.lives
+        )
+
+        self._pacman = entities.PacMan(
+            *self._grid.find_nearest_corridor(center),
+            self._config.pacman_speed,
+            self._grid,
+            lives,
+            "pacman",
+        )
 
         pinky = entities.Ghost(
             *corners["top_left"],
@@ -253,8 +249,7 @@ class GameEngine:
                 self.add_score(self._config.points_per_ghost)
                 ghost.switch_state(entities.GhostState.DIED)
                 log(
-                    f"Pac-Man ate ghost {ghost.name} "
-                    f"(+{self._config.points_per_ghost} pts)",
+                    f"Ate {ghost.name} (+{self._config.points_per_ghost} pts)",
                     "Engine",
                     LogType.INFO,
                 )
@@ -269,7 +264,7 @@ class GameEngine:
                 self._is_game_over = True
                 self._state = EngineState.GAME_OVER
                 log(
-                    "Game Over: All lives lost!",
+                    "Game Over: All lives lost",
                     "Engine",
                     LogType.WARNING,
                 )
@@ -400,7 +395,7 @@ class GameEngine:
             self._is_game_over = True
             self._state = EngineState.GAME_OVER
             log(
-                "Game Over: Level time expired!",
+                "Game Over: Time expired",
                 "Engine",
                 LogType.WARNING,
             )
@@ -481,15 +476,15 @@ class GameEngine:
             states_file.write_text(
                 json.dumps(states, indent=2), encoding="utf-8"
             )
-            log(
-                f"Engine state saved to '{states_file.name}'",
-                "Engine",
-                LogType.INFO,
-            )
+            log(f"State saved to '{states_file.name}'", "Engine", LogType.INFO)
             return True
 
         except (OSError, TypeError) as err:
-            log(f"Failed to save state ({err})", "Engine", LogType.WARNING)
+            log(
+                f"Save failed ({err.__class__.__name__})",
+                "Engine",
+                LogType.WARNING,
+            )
         return False
 
     def _load_states(self) -> bool:
@@ -502,7 +497,7 @@ class GameEngine:
 
         if not states_file.is_file():
             log(
-                f"Save file not found at {states_file}",
+                f"No save file '{states_file.name}'",
                 "Engine",
                 LogType.WARNING,
             )
@@ -511,7 +506,7 @@ class GameEngine:
         try:
             states = json.loads(states_file.read_text(encoding="utf-8"))
             if not states or not isinstance(states, dict):
-                log("Invalid or empty save file", "Engine", LogType.WARNING)
+                log("Invalid save file", "Engine", LogType.WARNING)
                 return False
 
             # load Config states
@@ -524,11 +519,7 @@ class GameEngine:
             # load engine states
             engine_data = states.get("engine", {})
             if not engine_data:
-                log(
-                    "Engine data missing from save file",
-                    "Engine",
-                    LogType.WARNING,
-                )
+                log("Save missing engine data", "Engine", LogType.WARNING)
 
             self._cur_level = engine_data.get("_cur_level", 1)
             self._score = engine_data.get("_score", 0)
@@ -655,15 +646,18 @@ class GameEngine:
 
             self.stop()
             log(
-                f"Engine state restored "
-                f"(Level {self._cur_level}, Score {self._score})",
+                f"Restored Lvl {self._cur_level} (Score {self._score})",
                 "Engine",
                 LogType.INFO,
             )
             return True
 
         except (json.JSONDecodeError, KeyError, OSError, ValueError) as err:
-            log(f"Failed to load state ({err})", "Engine", LogType.WARNING)
+            log(
+                f"Load failed ({err.__class__.__name__})",
+                "Engine",
+                LogType.WARNING,
+            )
             return False
 
     def tick(self, dt: float, pacman_direction: entities.Direction) -> None:
@@ -703,14 +697,14 @@ class GameEngine:
                 if self.is_game_won:
                     self._state = EngineState.GAME_WON
                     log(
-                        "Game Won! All levels completed!",
+                        "Game Won! All levels cleared!",
                         "Engine",
                         LogType.INFO,
                     )
                 elif self.is_level_completed:
                     log(
                         f"Level {self._cur_level} cleared! "
-                        f"Advancing to level {self._cur_level + 1}.",
+                        f"Next: {self._cur_level + 1}",
                         "Engine",
                         LogType.INFO,
                     )

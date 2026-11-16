@@ -183,7 +183,7 @@ class SuperPacGum(Consumable):
             engine: The game engine instance.
         """
         log(
-            "Super Pac-Gum consumed! Ghosts are now frightened.",
+            "Super Pac-Gum! Ghosts frightened",
             "Consumable",
             LogType.INFO,
         )

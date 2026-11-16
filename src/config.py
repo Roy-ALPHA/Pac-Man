@@ -198,6 +198,13 @@ class Config:
         def validate_int_field(
             key: str, min_val: int | None = None, max_val: int | None = None
         ) -> None:
+            """Validate an integer field and clamp it to defaults if invalid.
+
+            Args:
+                key: Configuration field name.
+                min_val: Optional minimum inclusive bound.
+                max_val: Optional maximum inclusive bound.
+            """
             if key not in data:
                 log(
                     f"Missing '{key}' in config. "

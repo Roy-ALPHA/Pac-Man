@@ -1,15 +1,20 @@
 """Maze adapter and grid model interfacing with the maze generator."""
 
+from __future__ import annotations
+
+from collections import deque
 from contextlib import redirect_stdout
 from dataclasses import dataclass, field
 from enum import Enum, auto
 import io
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from mazegenerator import MazeGenerator
 from .consumables import Consumable
 from .entities import PRIORITY_DIRECTIONS
 from .logger import log, LogType
-from collections import deque
+
+if TYPE_CHECKING:
+    from .config import LevelConfig
 
 
 class CellType(Enum):
@@ -72,13 +77,11 @@ class Cell:
 
 @dataclass(slots=True)
 class MazeGrid:
-    """2D grid structure containing cells, entry, and exit points."""
+    """2D grid structure containing cells."""
 
     width: int
     height: int
     grid: list[list[Cell]]
-    maze_entry: tuple[int, int]
-    maze_exit: tuple[int, int]
 
     def get_cell(self, x: int, y: int) -> Cell:
         """Retrieve the cell object at coordinates (x, y).
@@ -161,7 +164,7 @@ class MazeAdapter:
         """
         cls._width, cls._height = size
 
-    def generate_maze(self, level: Any) -> MazeGrid:
+    def generate_maze(self, level: LevelConfig | Any) -> MazeGrid:
         """Generate an expanded, playable maze grid for the specified level.
 
         Args:
@@ -179,12 +182,9 @@ class MazeAdapter:
 
         try:
             with redirect_stdout(tmp_stdout):
-                entry_cell = (0, maze_height // 2)
-                exit_cell = (maze_width - 1, maze_height // 2)
                 original_maze = self._generator_cls(
                     size=(maze_width, maze_height),
-                    seed=level.seed, entry_cell=entry_cell,
-                    exit_cell=exit_cell,
+                    seed=level.seed
                 )
 
             warn_msgs = tmp_stdout.getvalue()
@@ -202,9 +202,7 @@ class MazeAdapter:
             return MazeGrid(
                 width=ext_x,
                 height=ext_y,
-                grid=extended_maze,
-                maze_entry=(0, ext_y // 2),
-                maze_exit=(ext_x - 1, ext_y // 2),
+                grid=extended_maze
             )
         except Exception as e:
             log(

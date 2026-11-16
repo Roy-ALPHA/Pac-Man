@@ -10,11 +10,7 @@ class HighscoreManager:
     """Manages loading, validating, and persisting highscores to disk."""
 
     def __init__(self) -> None:
-        """Initialize the highscore manager from a JSON file.
-
-        Args:
-            highscore_file: Path to the JSON highscores file.
-        """
+        """Initialize the highscore manager and load highscores from disk."""
         self._file_path = DATA_DIR / "highscores.json"
         self._scores: dict[str, int] = {}
 
@@ -24,8 +20,7 @@ class HighscoreManager:
             or self._file_path.suffix != ".json"
         ):
             log(
-                f"Invalid or missing file: '{self._file_path}'. "
-                "Fallback: starting with an empty leaderboard.",
+                f"Missing '{self._file_path.name}', using empty board",
                 "Highscore",
                 LogType.WARNING,
             )
@@ -36,8 +31,7 @@ class HighscoreManager:
 
             if not isinstance(data, dict) or not data:
                 log(
-                    f"File '{self._file_path.name}' is empty or not a valid "
-                    "JSON dict. Fallback: starting with an empty leaderboard.",
+                    f"Invalid '{self._file_path.name}', using empty board",
                     "Highscore",
                     LogType.WARNING,
                 )
@@ -53,24 +47,21 @@ class HighscoreManager:
                     cleaned_data[name] = score
                 else:
                     log(
-                        f"Skipped invalid entry ({name!r}: {score!r}). "
-                        "Fallback: entry omitted from leaderboard.",
+                        f"Skipped invalid entry ({name!r}: {score!r})",
                         "Highscore",
                         LogType.WARNING,
                     )
 
             self._scores = cleaned_data
             log(
-                f"Loaded {len(self._scores)} highscore entries from "
-                f"'{self._file_path.name}'",
+                f"Loaded {len(self._scores)} highscores",
                 "Highscore",
                 LogType.INFO,
             )
 
         except (json.JSONDecodeError, OSError, AttributeError) as err:
             log(
-                f"Failed to read/parse highscore file: {err}. "
-                "Fallback: starting with an empty leaderboard.",
+                f"Parse error ({err.__class__.__name__}), resetting",
                 "Highscore",
                 LogType.WARNING,
             )
@@ -111,28 +102,18 @@ class HighscoreManager:
         cleaned_name = name.strip()
 
         if len(cleaned_name) > 10:
-            warn_msg = (
-                f"Name '{cleaned_name}' is too long (max 10 characters). "
-                "Score rejected: not saved."
-            )
+            warn_msg = f"Name '{cleaned_name}' too long (max 10)"
             log(warn_msg, "Highscore", LogType.WARNING)
             return False, warn_msg
 
         if type(score) is not int or score < 0:
-            warn_msg = (
-                f"Score must be a positive integer, got {score!r}. "
-                "Score rejected: not saved."
-            )
+            warn_msg = f"Invalid score {score!r}, must be >= 0"
             log(warn_msg, "Highscore", LogType.WARNING)
             return False, warn_msg
 
         invalid_pattern = r"[^a-zA-Z0-9 ]+"
         if not cleaned_name or re.search(invalid_pattern, cleaned_name):
-            warn_msg = (
-                f"Name '{cleaned_name}' is empty or contains "
-                "forbidden characters (alphanumeric and spaces only). "
-                "Score rejected: not saved."
-            )
+            warn_msg = f"Name '{cleaned_name}' invalid (letters/digits)"
             log(warn_msg, "Highscore", LogType.WARNING)
             return False, warn_msg
 
@@ -158,16 +139,13 @@ class HighscoreManager:
             old_score = self._scores[name]
             if score > old_score:
                 warn_msg = (
-                    f"Player '{name}' already exists with score {old_score}. "
-                    f"Replacement: updated to new personal best {score}."
+                    f"New record for '{name}': {score} (was {old_score})"
                 )
                 log(warn_msg, "Highscore", LogType.INFO)
                 self._scores[name] = score
             else:
                 warn_msg = (
-                    f"Player '{name}' already exists with higher score "
-                    f"({old_score} >= {score}). "
-                    f"Replacement: kept existing score {old_score}."
+                    f"Score {score} not higher than best ({old_score})"
                 )
                 log(warn_msg, "Highscore", LogType.WARNING)
                 return False, warn_msg
@@ -182,15 +160,12 @@ class HighscoreManager:
                 encoding="utf-8",
             )
             log(
-                f"Successfully saved highscore for '{name}': {score} pts",
+                f"Saved '{name}': {score} pts",
                 "Highscore",
                 LogType.INFO,
             )
         except OSError as err:
-            warn_msg = (
-                f"Failed to write scores to disk: {err}. "
-                "Score changes retained in memory only."
-            )
+            warn_msg = f"Save failed ({err.__class__.__name__})"
             log(warn_msg, "Highscore", LogType.WARNING)
             return False, warn_msg
 

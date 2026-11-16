@@ -1,15 +1,15 @@
 """Asynchronous animated logging and notification system using Rich."""
 
+from collections import deque
 from enum import Enum, auto
 from pathlib import Path
 import threading
-from typing import Any
+from typing import TextIO
 from colorama import Fore, Style
 from rich.console import Group, Console
 from rich.live import Live
 from rich.spinner import SPINNERS, Spinner
 from .data_dir import LOGS_DIR
-from collections import deque
 
 
 class LogType(Enum):
@@ -47,16 +47,23 @@ class WarningManager:
     """Thread-safe animated logger with live terminal spinners."""
 
     _spinners: int = 0
+    BOX_WIDTH: int = 76
+    MAX_MSG_LEN: int = 48
+    MAX_TABLES: int = 3
 
     def __init__(self) -> None:
         """Initialize logger synchronization, file handler, and frames."""
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
         self._worker = threading.Thread(target=self._warn)
-        self._tables = deque([])
+        self._tables: deque[list[Spinner | str]] = deque([])
         self._log_path = LOGS_DIR / "logs.txt"
-        self._logs_file = open(self._log_path, "w", encoding="utf-8")
-        WarningManager._gen_box(100)
+        self._logs_file: TextIO | None = None
+        try:
+            self._logs_file = open(self._log_path, "w", encoding="utf-8")
+        except OSError:
+            self._logs_file = None
+        WarningManager._gen_box(self.BOX_WIDTH)
 
     @property
     def log_path(self) -> Path:
@@ -114,8 +121,8 @@ class WarningManager:
 
         cls._spinners += 2
 
-    @staticmethod
-    def _gen_title_spinner(title: str) -> Spinner:
+    @classmethod
+    def _gen_title_spinner(cls, title: str) -> Spinner:
         """Generate animated title header spinner with Pac-Man frames.
 
         Args:
@@ -125,7 +132,7 @@ class WarningManager:
             Spinner: Constructed Rich Spinner.
         """
         if title not in SPINNERS:
-            width = 98
+            width = cls.BOX_WIDTH - 2
             title_text = f"[{title}]"
 
             if len(title_text) > width:
@@ -187,20 +194,28 @@ class WarningManager:
         if self._worker.is_alive():
             self._worker.join(timeout=1.0)
 
-        self._logs_file.close()
+        with self._lock:
+            if self._logs_file is not None and not self._logs_file.closed:
+                try:
+                    self._logs_file.close()
+                except OSError:
+                    pass
 
     def _warn(self) -> None:
         """Worker loop that drives live terminal spinner animations."""
-        with Live(
-            self._get_spinners(),
-            refresh_per_second=15,
-            console=Console(stderr=True),
-            vertical_overflow="visible",
-            transient=True,
-        ) as animation:
-            while not self._stop_event.is_set():
-                animation.update(self._get_spinners())
-                self._stop_event.wait(0.05)
+        try:
+            with Live(
+                self._get_spinners(),
+                refresh_per_second=15,
+                console=Console(stderr=True),
+                vertical_overflow="crop",
+                transient=True,
+            ) as animation:
+                while not self._stop_event.is_set():
+                    animation.update(self._get_spinners())
+                    self._stop_event.wait(0.05)
+        except Exception:
+            pass
 
     @classmethod
     def _create_spinner(cls, frames: list[str]) -> str:
@@ -223,8 +238,8 @@ class WarningManager:
 
         return spinner_name
 
-    @staticmethod
-    def _gen_line_spinner(msg: str, log_type: LogType) -> Spinner:
+    @classmethod
+    def _gen_line_spinner(cls, msg: str, log_type: LogType) -> Spinner:
         """Generate an animated typewriter spinner for a message line.
 
         Args:
@@ -234,6 +249,12 @@ class WarningManager:
         Returns:
             Spinner: Constructed animated line spinner.
         """
+        clean_msg = msg.replace("\n", " ").strip()
+        if len(clean_msg) > cls.MAX_MSG_LEN:
+            clean_msg = clean_msg[: cls.MAX_MSG_LEN - 3] + "..."
+        if not clean_msg:
+            clean_msg = " "
+
         arrows_frames = [
             "▹▹▹▹▹",
             "▸▹▹▹▹",
@@ -252,23 +273,27 @@ class WarningManager:
             else Fore.LIGHTRED_EX
         )
 
-        for i in range(len(msg)):
+        for i in range(len(clean_msg)):
             arr = arrows_frames[i % len(arrows_frames)]
             log_str = (
                 f"    {log_type.ansi()}{spaces}"
                 f"{Fore.LIGHTCYAN_EX}{arr}{Fore.RESET}    "
             )
 
-            char = msg[i].upper() if msg[i].isalpha() else msg[i]
+            char = (
+                clean_msg[i].upper()
+                if clean_msg[i].isalpha()
+                else clean_msg[i]
+            )
 
             animated_msg = (
                 Fore.YELLOW
-                + msg[:i]
+                + clean_msg[:i]
                 + Fore.RESET
                 + color
                 + char
                 + Style.RESET_ALL
-                + msg[i + 1:]
+                + clean_msg[i + 1:]
             )
 
             frames.append(log_str + animated_msg)
@@ -288,29 +313,44 @@ class WarningManager:
             title: Section title or component.
             log_type: Severity level.
         """
+        if self._logs_file is None or self._logs_file.closed:
+            return
         arrows = "▸▸▸▸▸"
         log = f"[{title}]{log_type.text()}   {arrows}   {msg}"
-        print(log, file=self._logs_file)
-        self._logs_file.flush()
+        try:
+            print(log, file=self._logs_file)
+            self._logs_file.flush()
+        except OSError:
+            pass
 
-    def log(self, msg, title, log_type):
+    def log(self, msg: str, title: str, log_type: LogType) -> None:
+        """Enqueue an animated log notification and persist it to disk.
+
+        Args:
+            msg: The message string to log.
+            title: Section or component title.
+            log_type: Severity category (INFO or WARNING).
+        """
         self._save_log(msg, title, log_type)
         with self._lock:
-            log = [
+            log_table: list[Spinner | str] = [
                 Spinner("b_top"),
                 self._gen_title_spinner(title),
                 self._gen_line_spinner(msg, log_type),
                 Spinner("b_bottom"),
-                ""
+                "",
             ]
-            self._tables.append(log)
+            self._tables.append(log_table)
 
-            spinners_counter = len(self._tables)
-
-            if spinners_counter == 11:
+            while len(self._tables) > self.MAX_TABLES:
                 self._tables.popleft()
 
     def _get_spinners(self) -> Group:
+        """Combine all active spinners and separators into a renderable Group.
+
+        Returns:
+            Group: Renderable group containing all current spinner frames.
+        """
         with self._lock:
             all_spinners = []
             for spinners in self._tables:

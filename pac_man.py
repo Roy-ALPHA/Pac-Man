@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
     try:
         warning_manager.start()
-        config = Config().from_file(Path(config_file))
+        config = Config.from_file(Path(config_file))
         pac_man = PacmanApp(config, 1200, 800)
         pac_man.run()
 
