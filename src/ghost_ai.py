@@ -440,18 +440,15 @@ class ClydeStrategy(GhostStrategy):
             Direction: Chosen direction.
         """
         dist = math.dist(clyde.tile, pacman.tile)
-        target = clyde.spawn
 
         if dist > 8:
-            target = pacman.tile
-        elif clyde.tile == clyde.spawn or dist < 8:
+            return self._go_to(
+                clyde.tile, pacman.tile, clyde.cur_direction.opposite(), maze
+            )
+        else:
             return self._wander(
                 clyde.tile, clyde.cur_direction.opposite(), maze
             )
-
-        return self._go_to(
-            clyde.tile, target, clyde.cur_direction.opposite(), maze
-        )
 
     def compute_next_move(
         self,
