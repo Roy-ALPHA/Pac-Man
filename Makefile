@@ -1,5 +1,3 @@
-export UV_SKIP_WHEEL_FILENAME_CHECK = 1
-
 config_file = config.json
 
 install:
