@@ -27,7 +27,7 @@ class MainMenuScreen(Screen):
         self._logo_pos = (self.middle_w - 405, self.middle_h - 300)
 
         self._font = pygame.font.Font(None, 50)
-        self.time_to_appear = 0
+        self.time_to_appear = 0.0
 
         self._buttons: dict[str, tuple] = {}
 
@@ -72,7 +72,7 @@ class MainMenuScreen(Screen):
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
 
     def render(self, render: Renderer) -> None:
-        
+
         """This method is responsible about rendering to the window
         all images.
         """
@@ -93,12 +93,12 @@ class MainMenuScreen(Screen):
         if self.time_to_appear > 0:
             text = self._font.render("No Game To Resume", True, 'red')
             render.blit_window(text, text.get_rect(
-                center=(self.middle_w, 50)))
+                center=(self.middle_w, 50)).topleft)
 
     def _hovered(self) -> str | None:
 
-        """This method check if the mouse hand is on a image if yes it return the
-        key of that image.
+        """This method check if the mouse hand is on a image if yes it return
+        the key of that image.
         """
         mouse_coord = pygame.mouse.get_pos()
 

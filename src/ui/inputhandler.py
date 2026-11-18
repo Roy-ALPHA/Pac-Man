@@ -33,7 +33,7 @@ class InputHandler:
 
     """
     CHEAT_KEYS = {pygame.K_1: 1, pygame.K_2: 2, pygame.K_3: 3,
-              pygame.K_4: 4, pygame.K_5: 5}
+                  pygame.K_4: 4, pygame.K_5: 5}
 
     def handle_events(self) -> InputCommand:
 

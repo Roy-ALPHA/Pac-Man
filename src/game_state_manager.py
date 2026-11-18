@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 from src.ui.inputhandler import InputCommand
 from src.ui.screen import Screen
 from src.ui.renderer import Renderer
@@ -29,19 +29,22 @@ class GameStateManager:
         """
         Method that call the input handler method of the active screen
         """
-        self._active_screen.handle_input(command)
+        if self._active_screen:
+            self._active_screen.handle_input(command)
 
     def update(self, dt: float) -> None:
         """
         Method that call the update method of the active screen
         """
-        self._active_screen.update(dt)
+        if self._active_screen:
+            self._active_screen.update(dt)
 
     def render(self, render: Renderer) -> None:
         """
         Method that call the render method of the active screen
         """
-        self._active_screen.render(render)
+        if self._active_screen:
+            self._active_screen.render(render)
 
     def save_game(self) -> None:
         if isinstance(self._active_screen, PlayScreen):
@@ -60,10 +63,12 @@ class GameStateManager:
             self._screens['play'] = PlayScreen(self._config, self._highscores)
 
         elif new_state == 'continue':
-            screen = PlayScreen(self._config, self._highscores, load_to_resume=True)
+            screen = PlayScreen(self._config, self._highscores,
+                                load_to_resume=True)
 
             if not screen.loaded:
-                self._screens['main_menu'].time_to_appear = 2000
+                cast(MainMenuScreen,
+                     self._screens['main_menu']).time_to_appear = 2000
                 return
 
             self._screens['play'] = screen

@@ -58,4 +58,5 @@ class RenderPlayer:
         x = self._off_x + round(player.x * t)
         y = self._off_y + round(player.y * t)
         area = pygame.Rect(frame * t, self._row * t, t, t)
-        self._screen.blit(self._sheet, (x, y), area)
+        if self._sheet:
+            self._screen.blit(self._sheet, (x, y), area)

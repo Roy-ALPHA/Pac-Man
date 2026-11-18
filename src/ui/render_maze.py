@@ -99,8 +99,9 @@ class RenderMaze:
             frame = (time + x + y) % self._frames
             area = pygame.Rect((mask % 16) * t, (frame * 16 + mask // 16) * t,
                                t, t)
-            self._screen.blit(sheet, (self._off_x + x * t,
-                                      self._off_y + y * t), area)
+            if sheet:
+                self._screen.blit(sheet, (self._off_x + x * t,
+                                          self._off_y + y * t), area)
 
     def _load(self, file: str) -> pygame.Surface:
         """
