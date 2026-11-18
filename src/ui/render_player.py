@@ -5,6 +5,10 @@ import pygame
 class RenderPlayer:
 
     def __init__(self, screen: pygame.Surface):
+        """
+        Method that initialize all the attribute of the
+        instance created from render player class
+        """
         self._screen = screen
         self._path = "src/assets/entities/pacman.png"
         self._rows = {(1, 0): 0, (0, 1): 1, (-1, 0): 2, (0, -1): 3}
@@ -19,6 +23,10 @@ class RenderPlayer:
         self._row = 0
 
     def prepare(self, maze_render: Any) -> None:
+        """
+        Method that prepare the envirment
+        to the player to be rendred
+        """
         self._tile = maze_render.tile
         self._off_x = maze_render.off_x
         self._off_y = maze_render.off_y
@@ -28,10 +36,9 @@ class RenderPlayer:
             sheet, (self._frames * self._tile, 4 * self._tile))
 
     def render(self, player: Any) -> None:
-
-        if self._sheet is None:
-            return
-
+        """
+        Method that render the player using a sheet
+        """
         if player.is_invincible and (pygame.time.get_ticks() // 150) % 2:
             return
 

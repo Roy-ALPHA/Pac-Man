@@ -1,5 +1,4 @@
-from typing import Any, cast
-
+from typing import Any
 from src.ui.inputhandler import InputCommand
 from src.ui.screen import Screen
 from src.ui.renderer import Renderer
@@ -14,6 +13,9 @@ class GameStateManager:
 
     def __init__(self, config: Any) -> None:
 
+        """Method that initialize all the attribute of the
+        instance created from this class.
+        """
         self._config = config
         self._highscores = HighscoreManager()
         self._active_screen: Screen | None = None
@@ -24,15 +26,21 @@ class GameStateManager:
         }
 
     def handle_input(self, command: InputCommand) -> None:
-        assert self._active_screen is not None
+        """
+        Method that call the input handler method of the active screen
+        """
         self._active_screen.handle_input(command)
 
     def update(self, dt: float) -> None:
-        assert self._active_screen is not None
+        """
+        Method that call the update method of the active screen
+        """
         self._active_screen.update(dt)
 
     def render(self, render: Renderer) -> None:
-        assert self._active_screen is not None
+        """
+        Method that call the render method of the active screen
+        """
         self._active_screen.render(render)
 
     def save_game(self) -> None:
@@ -41,6 +49,10 @@ class GameStateManager:
 
     def change_state(self, new_state: str) -> None:
 
+        """Method that change the screen to the new state
+        new state is a key of the new screen that will be
+        rendered instead of the current one
+        """
         if new_state == 'main_menu':
             Screen.door_closed = False
 
@@ -48,12 +60,10 @@ class GameStateManager:
             self._screens['play'] = PlayScreen(self._config, self._highscores)
 
         elif new_state == 'continue':
-            screen = PlayScreen(self._config, self._highscores, load=True)
+            screen = PlayScreen(self._config, self._highscores, load_to_resume=True)
 
             if not screen.loaded:
-                cast(MainMenuScreen,
-                     self._screens['main_menu']).show_message(
-                         "No game to resume")
+                self._screens['main_menu'].time_to_appear = 2000
                 return
 
             self._screens['play'] = screen

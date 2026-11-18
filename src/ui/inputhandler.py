@@ -2,13 +2,13 @@ from dataclasses import dataclass
 from ..entities import Direction
 import pygame
 
-CHEAT_KEYS = {pygame.K_1: 1, pygame.K_2: 2, pygame.K_3: 3,
-              pygame.K_4: 4, pygame.K_5: 5}
-
 
 @dataclass
 class InputCommand:
 
+    """This class create and object with the default value
+    each value is used for a specifique screen of feature
+    """
     direction: Direction = Direction.NONE
     change_style: bool = False
     mouse_clicked: bool = False
@@ -23,13 +23,23 @@ class InputCommand:
     toggle_cheats: bool = False
     cheat: int = 0
     backspace: bool = False
-    text: str = ""
+    lettre: str = ""
 
 
 class InputHandler:
 
+    """This class Handle the user input and Translate it to
+    input commande class.
+
+    """
+    CHEAT_KEYS = {pygame.K_1: 1, pygame.K_2: 2, pygame.K_3: 3,
+              pygame.K_4: 4, pygame.K_5: 5}
+
     def handle_events(self) -> InputCommand:
 
+        """This method is the responsebile about translanting the user
+        input to input commande.
+        """
         command = InputCommand()
 
         for event in pygame.event.get():
@@ -59,15 +69,17 @@ class InputHandler:
                 command.restart = True
             elif event.key == pygame.K_F1:
                 command.toggle_cheats = True
-            elif event.key in CHEAT_KEYS:
-                command.cheat = CHEAT_KEYS[event.key]
+            elif event.key in InputHandler.CHEAT_KEYS:
+                command.cheat = InputHandler.CHEAT_KEYS[event.key]
             elif event.key == pygame.K_BACKSPACE:
                 command.backspace = True
 
-            if event.unicode.isprintable():
-                command.text += event.unicode
+            command.lettre += event.unicode
 
         return command
 
     def clean(self) -> None:
+        """
+        This methode clean the ressources of pygame.
+        """
         pygame.quit()

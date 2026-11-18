@@ -148,6 +148,7 @@ class Entity(ABC):
         Returns:
             bool: True if invincible, False otherwise.
         """
+
         return self._invincible
 
     @property

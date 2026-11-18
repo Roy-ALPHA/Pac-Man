@@ -5,6 +5,10 @@ from ..maze_adapter import CellType
 
 class RenderMaze:
 
+    """
+    Class that is responsible about rendering the maze
+    """
+
     WALL_FILES = ['blue_wl.png', 'rose_wl.png', 'red_walls.png',
                   'purple_walls.png', 'green_walls.png']
     LOGO_FILE = 'orng_wl.png'
@@ -13,6 +17,10 @@ class RenderMaze:
                  (16, 0, 1), (32, -1, 1), (64, -1, 0), (128, -1, -1))
 
     def __init__(self, screen: pygame.Surface, width: int, height: int):
+        """
+        Method that initialize all the attribute of the instance
+        created from this class
+        """
         self._screen = screen
         self._width = width
         self._height = height
@@ -30,17 +38,32 @@ class RenderMaze:
 
     @property
     def tile(self) -> int:
+        """
+        Method that return the tile size
+        """
         return self._tile
 
     @property
     def off_x(self) -> int:
+        """
+        Method that return the offset x to centrelize
+        the maze in the middle
+        """
         return self._off_x
 
     @property
     def off_y(self) -> int:
+        """
+        Method that return the offset y to centrelize
+        the maze in the middle
+        """
         return self._off_y
 
     def prepare(self, maze: Any) -> None:
+        """
+        After every new maze this method prepare the envirment
+        for the new maze
+        """
         self._tile = min(self._width // maze.width,
                          self._height // maze.height)
         self._off_x = (self._width - self._tile * maze.width) // 2
@@ -58,12 +81,14 @@ class RenderMaze:
                         (cell.x, cell.y, self._get_mask(maze, cell), is_logo))
 
     def render(self, change_style: bool) -> None:
+        """
+        Method that is responsible about rendering the maze
+        on the screen
+        """
         if change_style:
             self._style = (self._style + 1) % len(self._wall_sheets)
 
         logo_sheet = self._logo_sheet
-        if logo_sheet is None:
-            return
 
         t = self._tile
         time = pygame.time.get_ticks() * self._fps // 1000
@@ -78,11 +103,18 @@ class RenderMaze:
                                       self._off_y + y * t), area)
 
     def _load(self, file: str) -> pygame.Surface:
+        """
+        Method that load image and transform its dimension and
+        return its object
+        """
         image = pygame.image.load(f"src/assets/maze/{file}")
         t = self._tile
         return pygame.transform.scale(image, (16 * t, 16 * t * self._frames))
 
     def _get_mask(self, maze: Any, cell: Any) -> int:
+        """
+        Method that calculate the mask for every cell
+        """
         mask = 0
         for value, dx, dy in self.NEIGHBORS:
             x, y = cell.x + dx, cell.y + dy

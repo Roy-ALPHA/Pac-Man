@@ -41,9 +41,6 @@ class Renderer:
     def draw_text(self, font: pygame.font.Font, text: str, color: str,
                   pos: tuple[int, int], center: bool = True) -> None:
 
-        if not text:
-            return
-
         image = font.render(text, True, color)
         rect = (image.get_rect(center=pos) if center
                 else image.get_rect(topleft=pos))

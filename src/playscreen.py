@@ -48,7 +48,7 @@ class PlayEngine(GameEngine):
     def save(self) -> bool:
         return self._save_states()
 
-    def load(self) -> bool:
+    def load_to_resume(self) -> bool:
         return self._load_states()
 
     def delete_save(self) -> None:
@@ -74,7 +74,7 @@ class PlayScreen(Screen):
                  "restart": "Restart the game?"}
 
     def __init__(self, config: Config, highscores: HighscoreManager,
-                 load: bool = False) -> None:
+                 load_to_resume: bool = False) -> None:
 
         self._engine = PlayEngine(config)
         self._config = config
@@ -106,7 +106,7 @@ class PlayScreen(Screen):
         self._cheat_rects = {name: pygame.Rect(x, 550 + i * 42, 160, 36)
                              for i, name in enumerate(self.CHEATS)}
 
-        self.loaded = load and self._engine.load()
+        self.loaded = load_to_resume and self._engine.load_to_resume()
         if self.loaded:
             self._owns_save = True
             self._paused = self._engine.state is EngineState.STOPPED
@@ -232,13 +232,10 @@ class PlayScreen(Screen):
 
         command.back = False
 
-        for letter in command.text:
-            allowed = letter.isascii() and (letter.isalnum() or letter == " ")
-            if allowed and len(self._name) < 10:
-                self._name += letter
-
         if command.backspace:
             self._name = self._name[:-1]
+        else:
+            self._name += command.lettre
 
         if clicked == "Save":
             saved, message = self._highscores.save(self._name,

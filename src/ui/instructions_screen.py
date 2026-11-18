@@ -6,7 +6,9 @@ import pygame
 
 class InstructionsScreen(Screen):
 
-    # ALL CAPITALS = heading (yellow). Empty text = blank line.
+    """
+    Class that is responsible about the instruction screen
+    """
     LINES = [
         "GOAL",
         "Eat all the dots in the maze to finish the level.",
@@ -34,18 +36,35 @@ class InstructionsScreen(Screen):
     ]
 
     def __init__(self) -> None:
+        """
+        Method that initialize all the attribute of the instance created
+        from instruction screen class.
+        """
         self._title_font = pygame.font.Font(None, 70)
         self._font = pygame.font.Font(None, 30)
 
     def handle_input(self, command: InputCommand) -> None:
+        """
+        Method that check if the mouse clicked to return to
+        the main menu
+        """
         if command.mouse_clicked:
             command.back = True
 
     def update(self, dt: float) -> None:
+        """
+        Method that change the mouse cursor
+        """
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+        if dt:
+            return
 
     def render(self, render: Renderer) -> None:
 
+        """
+        Method that is responsible about the
+        rendering in the instruction screen
+        """
         render.clear()
         render.draw_text(self._title_font, "HOW TO PLAY", 'yellow',
                          (self.middle_w, 40))
