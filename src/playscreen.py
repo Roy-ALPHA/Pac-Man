@@ -13,50 +13,91 @@ import pygame
 
 class PlayEngine(GameEngine):
 
+    """
+    Class Used to act as the engine and retune all the data that
+    we need from it and use its method.
+    """
     @property
     def is_level_loaded(self) -> bool:
+        """
+        Method that check if the level loaded
+        """
         return bool(self._is_level_loaded)
 
     @property
     def grid(self) -> Any:
+        """
+        Method that retune the grid
+        """
         return self._grid
 
     @property
     def pacman(self) -> Any:
+        """
+        Method that return the pacman
+        """
         return self._pacman
 
     @property
     def ghosts(self) -> Any:
+        """
+        Method that return the ghosts
+        """
         return self._ghosts
 
     @property
     def lives(self) -> Any:
+        """
+        Method that return the lifes left for pacman
+        """
         return self._pacman.lives
 
     @property
     def level(self) -> Any:
+        """
+        Method that return the current level
+        """
         return self._cur_level
 
     @property
     def max_level(self) -> int:
+        """
+        Method that return  the max level for the game
+        """
         return 10
 
     @property
     def time_left(self) -> Any:
+        """
+        Method that return  the time left for the game
+        """
         return max(0, self._level_time)
 
     def save(self) -> bool:
+        """
+        Method  that check if the game saved successfuly
+        """
         return self._save_states()
 
     def load_to_resume(self) -> bool:
+        """
+        Method that check check if the previous game state
+        loaded succesfully
+        """
         return self._load_states()
 
     def delete_save(self) -> None:
+        """
+        Method that delete if there is a saved game if it reach the end
+        """
         (DATA_DIR / "pacman_states.json").unlink(missing_ok=True)
 
 
 class PlayScreen(Screen):
 
+    """
+    Class that is responsible about the game rendering
+    """
     PAUSE_BUTTON = "Pause (P)"
     RESTART_BUTTON = "Restart (R)"
     CHEATS_BUTTON = "Cheats (F1)"
@@ -76,6 +117,10 @@ class PlayScreen(Screen):
     def __init__(self, config: Config, highscores: HighscoreManager,
                  load_to_resume: bool = False) -> None:
 
+        """
+        Method that initialize all the attribute of the instance created
+        from playscreen class
+        """
         self._engine = PlayEngine(config)
         self._config = config
         self._highscores = highscores
@@ -109,14 +154,17 @@ class PlayScreen(Screen):
         self.loaded = load_to_resume and self._engine.load_to_resume()
         if self.loaded:
             self._owns_save = True
-            self._paused = self._engine.state is EngineState.STOPPED
+            self._engine.resume()
 
     def _reset_state(self) -> None:
 
+        """
+        Method that reset the state in the case
+        if the user want to restart the game
+        """
         self._direction = Direction.NONE
         self._paused = False
         self._question: str | None = None
-        self._paused_before_question = False
         self._cheats_on = False
         self._save_cleared = False
         self._owns_save = False
@@ -125,6 +173,11 @@ class PlayScreen(Screen):
         self._message = ""
 
     def _mode(self) -> str:
+        """
+        Method that check the current
+        stat of the game and return str refering
+        to the active state
+        """
         if self._question:
             return "question"
         if self._game_ended():
@@ -134,14 +187,27 @@ class PlayScreen(Screen):
         return "play"
 
     def _game_ended(self) -> bool:
+
+        """
+        Method that check if the current
+        game if it reach the end
+        """
         return self._engine.state in (EngineState.GAME_OVER,
                                       EngineState.GAME_WON)
 
     def _game_in_progress(self) -> bool:
+
+        """
+        Method that check if the game still in
+        progress or it end
+        """
         return self._engine.is_level_loaded and not self._game_ended()
 
     def handle_input(self, command: InputCommand) -> None:
 
+        """
+        Method that handle the user input
+        """
         clicked = self._clicked_button(command)
 
         if command.quit and self._game_in_progress():
@@ -161,6 +227,11 @@ class PlayScreen(Screen):
 
     def _handle_play(self, command: InputCommand, clicked: str | None) -> None:
 
+        """
+        Method that handle all input during normal gameplay
+        in short it routes every player action during
+        gameplay to the right response.
+        """
         wants_restart = command.restart or clicked == self.RESTART_BUTTON
         if wants_restart and self._engine.is_level_loaded:
             self._start_question("restart")
@@ -189,7 +260,10 @@ class PlayScreen(Screen):
             self._direction = command.direction
 
     def _use_cheat(self, name: str) -> None:
-
+        """
+        Method that activate the cheat and use the flash
+        for timr self.FLASH_MS
+        """
         cheat = self.CHEATS[name]
         self._engine.activate_cheat(cheat)
 
@@ -199,6 +273,9 @@ class PlayScreen(Screen):
     def _handle_pause(self, command: InputCommand,
                       clicked: str | None) -> None:
 
+        """
+        Method that handle the pause screen
+        """
         if command.restart and self._engine.is_level_loaded:
             self._start_question("restart")
             return
@@ -214,6 +291,9 @@ class PlayScreen(Screen):
     def _handle_question(self, command: InputCommand,
                          clicked: str | None) -> None:
 
+        """
+        Method that handle the question
+        """
         if self._question == "restart":
             if clicked == "Yes":
                 self._restart_game()
@@ -230,6 +310,9 @@ class PlayScreen(Screen):
 
     def _handle_end(self, command: InputCommand, clicked: str | None) -> None:
 
+        """
+        Method that handle the end of the game
+        """
         command.back = False
 
         if command.backspace:
@@ -247,10 +330,15 @@ class PlayScreen(Screen):
 
     def update(self, dt: float) -> None:
 
+        """
+        Method that update the state of the game during
+        the game.
+        """
         if self._game_ended() and not self._save_cleared:
             if self._owns_save:
                 self._engine.delete_save()
             self._save_cleared = True
+
         self._flash = {name: left - dt for name, left in self._flash.items()
                        if left - dt > 0}
 
@@ -258,18 +346,13 @@ class PlayScreen(Screen):
             Screen.door_w -= 1100 * (dt / 1000)
 
         self._engine.tick(dt / 1000, self._direction)
-        self._update_cursor()
-
-    def _update_cursor(self) -> None:
-
-        mouse = pygame.mouse.get_pos()
-        on_button = any(rect.collidepoint(mouse)
-                        for rect in self._buttons().values())
-        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND if on_button
-                                else pygame.SYSTEM_CURSOR_ARROW)
 
     def save_game(self) -> bool:
 
+        """
+        Method that save the state of the game when the user
+        ask for it
+        """
         if not self._game_in_progress():
             return False
 
@@ -288,6 +371,10 @@ class PlayScreen(Screen):
 
     def _toggle_pause(self) -> None:
 
+        """
+        Method that switch between pause screen
+        and play screen
+        """
         self._message = ""
 
         if self._paused:
@@ -299,17 +386,24 @@ class PlayScreen(Screen):
 
     def _restart_game(self) -> None:
 
+        """
+        Method that restart the game by creating new maze and
+        and new engine then rested the previous state to default.
+        """
         MazeAdapter.set_maze_size((self._config.width, self._config.height))
         self._engine = PlayEngine(self._config)
         self._reset_state()
 
     def _start_question(self, kind: str) -> None:
 
+        """
+        Method that set up the envirement
+        for the specifique dialogue to be rendered
+        """
         if self._question == "quit":
             return
 
         if self._question is None:
-            self._paused_before_question = self._paused
             if not self._paused:
                 self._toggle_pause()
 
@@ -318,24 +412,30 @@ class PlayScreen(Screen):
 
     def _close_question(self) -> None:
 
+        """
+        Method that close the dialog
+        and clear the message and switch to play screen
+        using toggle
+        """
         self._question = None
         self._message = ""
-
-        if not self._paused_before_question and self._paused:
-            self._toggle_pause()
+        self._toggle_pause()
 
     def _make_rect(self, w: int, h: int, y_offset: int,
                    x_offset: int = 0) -> pygame.Rect:
 
+        """
+        Method that creat all buttons
+        """
         rect = pygame.Rect(0, 0, w, h)
         rect.center = (self.middle_w + x_offset, self.middle_h + y_offset)
         return rect
 
     def _hub_buttons(self) -> dict[str, pygame.Rect]:
 
-        if not self._engine.is_level_loaded:
-            return {}
-
+        """
+        Method that create all the hub buttons
+        """
         buttons = {self.PAUSE_BUTTON: self._pause_rect,
                    self.RESTART_BUTTON: self._restart_rect,
                    self.CHEATS_BUTTON: self._cheats_rect}
@@ -347,6 +447,10 @@ class PlayScreen(Screen):
 
     def _buttons(self) -> dict[str, pygame.Rect]:
 
+        """
+        Method that retunr the button to use depend on the current
+        mode
+        """
         mode = self._mode()
 
         if mode == "question":
@@ -362,6 +466,9 @@ class PlayScreen(Screen):
 
     def _clicked_button(self, command: InputCommand) -> str | None:
 
+        """
+        Method that check which button was clicked
+        """
         if not command.mouse_clicked:
             return None
 
@@ -374,6 +481,10 @@ class PlayScreen(Screen):
 
     def _is_on(self, text: str) -> bool:
 
+        """
+        Method that tell which button should be highlightd to
+        green color
+        """
         if text in self._flash:
             return True
 
@@ -398,6 +509,10 @@ class PlayScreen(Screen):
 
     def render(self, render: Renderer) -> None:
 
+        """
+        Method that manage the rendring and the draw on the
+        screen
+        """
         render.clear()
 
         if self._engine.is_level_loaded:
@@ -418,6 +533,9 @@ class PlayScreen(Screen):
 
     def _draw_game(self, render: Renderer) -> None:
 
+        """
+        Method that draw the game (maze, entities, hub ...)
+        """
         engine = self._engine
 
         render.render_maze(engine.grid, self._change_style)
@@ -433,6 +551,9 @@ class PlayScreen(Screen):
     def _draw_buttons(self, render: Renderer, buttons: dict[str, pygame.Rect],
                       font: pygame.font.Font, can_click: bool = True) -> None:
 
+        """
+        Method that draw buttons
+        """
         mouse = pygame.mouse.get_pos()
 
         for text, rect in buttons.items():
@@ -455,6 +576,9 @@ class PlayScreen(Screen):
 
     def _draw_question(self, render: Renderer) -> None:
 
+        """
+        Method that draw the dialog
+        """
         question = self._question
         if question is None:
             return
@@ -472,6 +596,9 @@ class PlayScreen(Screen):
 
     def _draw_pause_menu(self, render: Renderer) -> None:
 
+        """
+        Method that draw the pause screen
+        """
         mid_w, mid_h = self.middle_w, self.middle_h
 
         render.blit_window(self._overlay, (0, 0))
@@ -483,6 +610,9 @@ class PlayScreen(Screen):
 
     def _draw_end_screen(self, render: Renderer) -> None:
 
+        """
+        Method that draw the end screen
+        """
         if self._engine.state is EngineState.GAME_WON:
             title, color, reason = "YOU WIN!", 'yellow', ""
         elif self._engine.lives <= 0:

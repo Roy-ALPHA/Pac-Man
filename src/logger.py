@@ -318,8 +318,7 @@ class WarningManager:
         arrows = "▸▸▸▸▸"
         log = f"[{title}]{log_type.text()}   {arrows}   {msg}"
         try:
-            print(log, file=self._logs_file)
-            self._logs_file.flush()
+            print(log, file=self._logs_file, flush=True)
         except OSError:
             pass
 

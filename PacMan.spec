@@ -6,7 +6,7 @@ a = Analysis(
     ['pac_man.py'],  # Main Python entry point of the game.
 
     datas=[
-        ('src/assets', 'assets'),  # Bundle the project's assets folder into the application.
+        ('assets', 'assets'),  # Bundle the project's assets folder into the application.
     ],
 )
 
@@ -15,9 +15,9 @@ pyz = PYZ(a.pure)
 
 # Select the appropriate application icon for the target operating system.
 if sys.platform == "win32":
-    app_icon = "src/assets/win.ico"   # Windows icon format.
+    app_icon = "assets/win.ico"   # Windows icon format.
 elif sys.platform == "darwin":
-    app_icon = "src/assets/ios.icns"  # macOS icon format.
+    app_icon = "assets/ios.icns"  # macOS icon format.
 else:
     app_icon = None                # No embedded icon for Linux.
 

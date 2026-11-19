@@ -110,7 +110,6 @@ class RenderMaze:
         return its object
         """
         image = pygame.image.load(ASSETS_DIR / "maze" / file)
-        
         t = self._tile
         return pygame.transform.scale(image, (16 * t, 16 * t * self._frames))
 

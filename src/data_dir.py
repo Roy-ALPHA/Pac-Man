@@ -32,6 +32,7 @@ def get_app_logs_dir(app_name: str = "pacman") -> Path:
     path.mkdir(parents=True, exist_ok=True)
     return path
 
+
 def get_assets_dir() -> Path:
 
     """Resolve the assets directory for both terminal and executable."""
@@ -40,10 +41,10 @@ def get_assets_dir() -> Path:
     else:
         base = Path(__file__).parent.parent
     
-    for candidate in [base / "src" / "assets", base / "assets"]:
-        if candidate.is_dir():
+    candidate = base / "assets"
+    if candidate.is_dir():
             return candidate
-    return base / "src" / "assets"
+    return base / "assets"
 
 
 ASSETS_DIR = get_assets_dir()
