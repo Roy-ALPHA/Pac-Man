@@ -38,7 +38,6 @@ def get_assets_dir() -> Path:
     if getattr(sys, "frozen", False):
         base = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
     else:
-        print(Path(sys.executable).parent)
         base = Path(__file__).parent.parent
     
     for candidate in [base / "src" / "assets", base / "assets"]:
