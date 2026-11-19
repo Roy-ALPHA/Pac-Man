@@ -1,6 +1,7 @@
 from ..consumables import SuperPacGum
 from ..maze_adapter import MazeGrid
 from src.ui.render_maze import RenderMaze
+from ..data_dir import ASSETS_DIR
 import pygame
 
 
@@ -38,7 +39,7 @@ class RenderConsumables:
 
         self._sheets.clear()
         for file in self.FILES:
-            image = pygame.image.load(f"src/assets/maze/{file}")
+            image = pygame.image.load(ASSETS_DIR / "maze" / file)
             self._sheets.append(pygame.transform.scale(
                 image, (self._frames * self._tile, 2 * self._tile)))
 

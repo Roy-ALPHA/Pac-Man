@@ -1,6 +1,7 @@
 """Application data directory resolver for persistent storage."""
 
 from pathlib import Path
+import sys
 from platformdirs import user_data_dir, user_log_dir
 
 
@@ -31,6 +32,21 @@ def get_app_logs_dir(app_name: str = "pacman") -> Path:
     path.mkdir(parents=True, exist_ok=True)
     return path
 
+def get_assets_dir() -> Path:
 
+    """Resolve the assets directory for both terminal and executable."""
+    if getattr(sys, "frozen", False):
+        base = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    else:
+        print(Path(sys.executable).parent)
+        base = Path(__file__).parent.parent
+    
+    for candidate in [base / "src" / "assets", base / "assets"]:
+        if candidate.is_dir():
+            return candidate
+    return base / "src" / "assets"
+
+
+ASSETS_DIR = get_assets_dir()
 LOGS_DIR = get_app_logs_dir()
 DATA_DIR = get_app_data_dir()

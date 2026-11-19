@@ -1,6 +1,7 @@
+from ..data_dir import ASSETS_DIR
+from ..maze_adapter import CellType
 from typing import Any
 import pygame
-from ..maze_adapter import CellType
 
 
 class RenderMaze:
@@ -108,7 +109,8 @@ class RenderMaze:
         Method that load image and transform its dimension and
         return its object
         """
-        image = pygame.image.load(f"src/assets/maze/{file}")
+        image = pygame.image.load(ASSETS_DIR / "maze" / file)
+        
         t = self._tile
         return pygame.transform.scale(image, (16 * t, 16 * t * self._frames))
 

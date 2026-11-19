@@ -1,4 +1,5 @@
 from typing import Any
+from ..data_dir import ASSETS_DIR
 import pygame
 
 
@@ -10,7 +11,7 @@ class RenderPlayer:
         instance created from render player class
         """
         self._screen = screen
-        self._path = "src/assets/entities/pacman.png"
+        self._path = ASSETS_DIR / "entities" / "pacman.png"
         self._rows = {(1, 0): 0, (0, 1): 1, (-1, 0): 2, (0, -1): 3}
         self._frames = 8
         self._idle_frame = 3

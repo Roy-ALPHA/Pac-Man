@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from .inputhandler import InputCommand
+from ..data_dir import ASSETS_DIR
 from .renderer import Renderer
 import pygame
 
@@ -33,7 +34,7 @@ class Screen(ABC):
         """
         Method that load the image
         """
-        return pygame.image.load(f"src/assets/{path}")
+        return pygame.image.load(ASSETS_DIR / path)
 
     @abstractmethod
     def handle_input(self, command: InputCommand) -> None:

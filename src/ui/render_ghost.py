@@ -1,4 +1,5 @@
 from typing import Iterable, Optional, Protocol
+from ..data_dir import ASSETS_DIR
 import pygame
 
 
@@ -69,7 +70,7 @@ class RenderGhost:
         created from this class
         """
         self._screen = screen
-        self._folder = "src/assets/entities/"
+        self._folder = ASSETS_DIR / "entities"
         self._names = ["Blinky", "Pinky", "Inky", "Clyde"]
         self._rows = {(1, 0): 0, (0, 1): 1, (-1, 0): 2, (0, -1): 3}
         self._frames = 8
@@ -116,7 +117,7 @@ class RenderGhost:
         Method that load the images
         of the ghosts
         """
-        image = pygame.image.load(self._folder + file)
+        image = pygame.image.load(self._folder / file)
         return pygame.transform.scale(
             image, (self._frames * self._tile, rows * self._tile))
 
