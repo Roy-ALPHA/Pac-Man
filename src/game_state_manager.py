@@ -46,10 +46,6 @@ class GameStateManager:
         if self._active_screen:
             self._active_screen.render(render)
 
-    def save_game(self) -> None:
-        if isinstance(self._active_screen, PlayScreen):
-            self._active_screen.save_game()
-
     def change_state(self, new_state: str) -> None:
 
         """Method that change the screen to the new state

@@ -154,10 +154,12 @@ class PlayScreen(Screen):
             self._handle_question(command, clicked)
         elif mode == "end":
             self._handle_end(command, clicked)
+        elif mode == "pause":
+            self._handle_pause(command, clicked)
         else:
-            self._handle_game(command, clicked)
+            self._handle_play(command, clicked)
 
-    def _handle_game(self, command: InputCommand, clicked: str | None) -> None:
+    def _handle_play(self, command: InputCommand, clicked: str | None) -> None:
 
         wants_restart = command.restart or clicked == self.RESTART_BUTTON
         if wants_restart and self._engine.is_level_loaded:
@@ -166,13 +168,7 @@ class PlayScreen(Screen):
 
         if command.pause or clicked == self.PAUSE_BUTTON:
             self._toggle_pause()
-
-        if self._paused:
-            self._handle_pause(command, clicked)
-        else:
-            self._handle_play(command, clicked)
-
-    def _handle_play(self, command: InputCommand, clicked: str | None) -> None:
+            return
 
         if command.change_style:
             self._change_style = True
@@ -203,7 +199,11 @@ class PlayScreen(Screen):
     def _handle_pause(self, command: InputCommand,
                       clicked: str | None) -> None:
 
-        if clicked == "Resume":
+        if command.restart and self._engine.is_level_loaded:
+            self._start_question("restart")
+            return
+
+        if command.pause or clicked == "Resume":
             self._toggle_pause()
         elif clicked == "Save Game":
             saved = self.save_game()
@@ -270,7 +270,7 @@ class PlayScreen(Screen):
 
     def save_game(self) -> bool:
 
-        if self._game_ended() or not self._engine.is_level_loaded:
+        if not self._game_in_progress():
             return False
 
         if self._paused:
@@ -389,7 +389,8 @@ class PlayScreen(Screen):
         if cheat is Cheat.INVINCIBILITY:
             return bool(pacman.is_invincible)
         if cheat is Cheat.INCREASE_SPEED:
-            return bool(pacman.speed > self._config.pacman_speed)
+            effects = pacman.get_effects_state()
+            return "SPEED_BUFF" in effects and effects["SPEED_BUFF"] is None
         if cheat is Cheat.GHOST_FREEZE:
             return any(ghost.is_frozen for ghost in self._engine.ghosts)
 
@@ -411,8 +412,9 @@ class PlayScreen(Screen):
         elif mode == "pause":
             self._draw_pause_menu(render)
 
-        render.draw_door(0, Screen.door_w)
-        render.draw_door(Screen.screen_w - Screen.door_w, Screen.door_w)
+        if Screen.door_w > 0:
+            render.draw_door(0, Screen.door_w)
+            render.draw_door(Screen.screen_w - Screen.door_w, Screen.door_w)
 
     def _draw_game(self, render: Renderer) -> None:
 
