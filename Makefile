@@ -1,4 +1,5 @@
 config_file = config.json
+.PHONY: build
 
 install:
 	@uv sync
@@ -11,8 +12,11 @@ debug:
 
 clean:
 	@rm -rf __pycache__ .mypy_cache src/__pycache__ src/ui/__pycache__
+	@rm -rf build dist
 
 lint:
 	@uv run flake8 .
 	@uv run mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
-	
+
+build:
+	@uv run pyinstaller PacMan.spec
