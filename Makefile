@@ -1,5 +1,5 @@
 config_file = config.json
-.PHONY: build
+.PHONY: install run debug clean lint build
 
 install:
 	@uv sync
