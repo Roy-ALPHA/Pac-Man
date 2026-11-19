@@ -19,4 +19,4 @@ lint:
 	@uv run mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
 
 build:
-	@uv run pyinstaller PacMan.spec
+	@uv run python -m PyInstaller PacMan.spec
