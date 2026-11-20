@@ -154,7 +154,7 @@ class PlayScreen(Screen):
         self.loaded = load_to_resume and self._engine.load_to_resume()
         if self.loaded:
             self._owns_save = True
-            self._engine.resume()
+            self._paused = self._engine.state is EngineState.STOPPED
 
     def _reset_state(self) -> None:
 
