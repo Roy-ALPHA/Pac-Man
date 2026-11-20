@@ -354,7 +354,6 @@ classDiagram
         +ghost_speed float
         +pacman_speed float
         +seed int
-        +level_max_time int
         +from_file(path)$ Config
         +generate_level(level) LevelConfig
     }
@@ -362,7 +361,6 @@ classDiagram
     class LevelConfig {
         <<frozen dataclass>>
         +level int
-        +level_max_time int
         +frightened_duration float
         +ghost_speed float
         +seed int

@@ -53,7 +53,7 @@ Quality Assurance was conducted through a combination of:
 | :---: | :--- | :--- | :--- | :---: |
 | **TC-D01** | Ghost Speed Scaling | Progress from Level 1 to Level 5. | Ghost speed increases dynamically according to formula: $\min(4.8, \text{speed} + 0.1 \cdot (N-1))$. | **PASS** |
 | **TC-D02** | Frightened Time Scale| Eat super-pellet on Level 8. | Frightened timer is noticeably shorter ($\max(2.0, \text{dur} - 0.5 \cdot (N-1))$). | **PASS** |
-| **TC-D03** | Level Timer Scale | Observe level timer on higher levels. | Max allowed time decreases smoothly down to minimum of 45 seconds. | **PASS** |
+| **TC-D03** | Level Timer Scale | Observe level timer on higher levels. | Level duration is computed dynamically based on total pellets and speed ratio ($\max(30.0, \dots)$ seconds). | **PASS** |
 | **TC-D04** | Game Victory | Eat all dots on Level 10. | Game transitions to `GAME_WON` state; victory banner displays. | **PASS** |
 
 ### Category E: Cheats, Highscores & State Persistence

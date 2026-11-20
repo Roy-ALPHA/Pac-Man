@@ -128,8 +128,7 @@ Example with all the default values:
   "frightened_duration": 8.0,
   "ghost_speed": 3.0,
   "pacman_speed": 5.0,
-  "seed": 42,
-  "level_max_time": 90
+  "seed": 42
 }
 ```
 
@@ -145,7 +144,6 @@ Example with all the default values:
 | `ghost_speed` | number | 3.0 | > 0 | Ghost speed in tiles per second (level 1) |
 | `pacman_speed` | number | 5.0 | > 0 | Pac-Man speed in tiles per second |
 | `seed` | int | 42 | >= 1 | Seed of the level 1 maze |
-| `level_max_time` | int | 90 | >= 20 | Base level time in seconds (level 1) |
 
 **Error handling.** If the file is missing, is not a regular `.json` file, or contains invalid JSON, the game starts with the default values and prints a warning. If a single value is missing or invalid, only that value falls back to its default, with a warning.
 
@@ -153,7 +151,7 @@ Example with all the default values:
 
 | Value | Formula |
 | --- | --- |
-| Level time | `max(45, level_max_time - (N - 1) * 3)` seconds |
+| Level time | Dynamically calculated from pellet count and speed ratio (`max(30.0, ...)` seconds) |
 | Frightened duration | `max(2.0, frightened_duration - (N - 1) * 0.5)` seconds |
 | Ghost speed | `min(4.8, ghost_speed + (N - 1) * 0.1)` |
 | Maze seed | `seed` for level 1, a random seed for the other levels |
