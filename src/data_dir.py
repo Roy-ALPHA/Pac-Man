@@ -40,10 +40,10 @@ def get_assets_dir() -> Path:
         base = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
     else:
         base = Path(__file__).parent.parent
-    
+
     candidate = base / "assets"
     if candidate.is_dir():
-            return candidate
+        return candidate
     return base / "assets"
 
 
