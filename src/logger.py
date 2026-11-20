@@ -194,12 +194,11 @@ class WarningManager:
         if self._worker.is_alive():
             self._worker.join(timeout=1.0)
 
-        with self._lock:
-            if self._logs_file is not None and not self._logs_file.closed:
-                try:
-                    self._logs_file.close()
-                except OSError:
-                    pass
+        if self._logs_file is not None and not self._logs_file.closed:
+            try:
+                self._logs_file.close()
+            except OSError:
+                pass
 
     def _warn(self) -> None:
         """Worker loop that drives live terminal spinner animations."""

@@ -472,7 +472,6 @@ class GameEngine:
                             states["maze_eaten"].append((cell.x, cell.y))
 
             states_file = DATA_DIR / "pacman_states.json"
-            DATA_DIR.mkdir(parents=True, exist_ok=True)
             states_file.write_text(
                 json.dumps(states, indent=2), encoding="utf-8"
             )
