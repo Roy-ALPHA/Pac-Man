@@ -35,18 +35,21 @@ flowchart TD
         Entities["PacMan, Ghost"]
         AI["Ghost strategies"]
         Cons["Consumables"]
+        LogSys["WarningManager<br/>(logger.py)"]
     end
 
-    subgraph Data["Data and files"]
+    subgraph Data["Data, Persistence and Platform"]
         Config["Config / LevelConfig"]
         Maze["MazeAdapter<br/>(A-Maze-ing)"]
         HS["HighscoreManager"]
-        Files[("config.json<br/>highscores.json<br/>pacman_states.json")]
+        DDir["data_dir.py<br/>(platformdirs)"]
+        Files[("config.json<br/>DATA_DIR/highscores.json<br/>DATA_DIR/pacman_states.json<br/>LOGS_DIR/logs.txt")]
     end
 
     App --> Input
     App --> GSM
     App --> Rend
+    App --> LogSys
     GSM --> Screens
     Screens --> Rend
     Screens --> Engine
@@ -55,10 +58,14 @@ flowchart TD
     Engine --> Cons
     Engine --> Maze
     Engine --> Config
+    Engine --> LogSys
     Entities --> AI
     Config --> Files
+    HS --> DDir
+    DDir --> Files
     HS --> Files
     Engine --> Files
+    LogSys --> Files
 ```
 
 ---
@@ -210,7 +217,7 @@ classDiagram
         +max_level int
         +time_left float
         +save() bool
-        +load() bool
+        +load_to_resume() bool
         +delete_save() None
     }
 
@@ -242,9 +249,9 @@ classDiagram
         +cur_direction Direction
         +is_invincible bool
         +can_move(direction) bool
-        +activate_effect(skill, buff) None
-        +desactivate_effect(skill) None
-        +reset_effects() None
+        +activate_effect(effect, duration) None
+        +has_effect(effect) bool
+        +update_effects(dt) None
         +respawn()*
         +update(dt)*
     }
@@ -283,11 +290,12 @@ classDiagram
         WANDER
         DIED
     }
-    class Skill {
+    class EntityEffect {
         <<enumeration>>
-        SPEED
         INVINCIBILITY
-        FREEZ
+        SPEED_BUFF
+        SPEED_DEBUFF
+        FREEZE
     }
 
     class GhostStrategy {
@@ -315,7 +323,7 @@ classDiagram
     Entity <|-- PacMan
     Entity <|-- Ghost
     Entity --> Direction
-    Entity ..> Skill
+    Entity ..> EntityEffect
     Ghost --> GhostState
     Ghost o-- GhostStrategy
     Ghost ..> PacMan : chases
@@ -397,6 +405,24 @@ classDiagram
         +save(name, score) tuple
     }
 
+    class LogType {
+        <<enumeration>>
+        INFO
+        WARNING
+        +ansi() str
+        +text() str
+    }
+
+    class WarningManager {
+        -lock Lock
+        -tables deque
+        -logs_file TextIO
+        +log_path Path
+        +start() None
+        +stop() None
+        +log(msg, title, log_type) None
+    }
+
     GameEngine ..> Config : reads rules
     Config ..> LevelConfig : creates
     Config ..> MazeAdapter : sets size
@@ -406,6 +432,9 @@ classDiagram
     Cell --> CellType
     PlayScreen ..> HighscoreManager : saves score
     HighscoreScreen ..> HighscoreManager : shows top 10
+    GameEngine ..> WarningManager : logs events
+    HighscoreManager ..> WarningManager : logs warnings
+    WarningManager --> LogType
 ```
 
 > `Grid` and `Cell` are the names used in this document for the maze grid and its cells. Use the real class names from `maze_adapter.py` if they are different.

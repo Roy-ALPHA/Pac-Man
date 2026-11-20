@@ -37,7 +37,9 @@ Throughout the 8-week lifecycle, weekly retrospectives compared actual feature c
 | **Sprint 3: Entity Renderers (Pac-Man & Ghosts)** | 5 | 4 | -1 day | Reused modular pattern across `RenderPlayer` and `RenderGhost`, accelerating completion. |
 | **Sprint 4: State Serialization (Save & Resume)** | 4 | 3 | -1 day | Having pure dataclasses with no pygame objects made JSON serialization clean and fast. |
 | **Sprint 4: Highscores & Validation Screen** | 3 | 3 | 0 days | Developed smoothly; integrated XDG standard directory for persistent storage. |
-| **Sprint 4: Code Quality (Mypy, Flake8, Docs)** | 4 | 4 | 0 days | Strict enforcement completed across all 20+ modules without regression. |
+| **Sprint 4: Animated Logger & Fault Tolerance** | 3 | 3 | 0 days | Integrated asynchronous Rich live spinners with bounded cropping and thread-safe file I/O. |
+| **Sprint 4: Standalone Packaging (PyInstaller)** | 3 | 4 | +1 day | Authored `PacMan.spec` to bundle runtime dependencies, `.whl` modules, icons, and asset trees across Linux, macOS, and Windows. |
+| **Sprint 4: Code Quality (Mypy, Flake8, Docs)** | 4 | 4 | 0 days | Strict enforcement completed across all 23 modules without regression. |
 
 ---
 
@@ -65,7 +67,12 @@ Every major project milestone is directly grounded in the Git version history of
 | **2026-11-07** | `3a436f9` | `yoelboud` | Flake8, Mypy and Docstring sweep | Cleaned entire codebase to 100% strict compliance. |
 | **2026-11-07** | `6590de3` | `yoelboud` | BFS pathfinding optimization | Eliminated ghost hesitation and CPU spikes on large mazes. |
 | **2026-11-09** | `3b3d8f8` | `yoelboud` | Adopted `platformdirs` for XDG storage | Cleaned up save directory paths across Linux/macOS/Windows. |
-| **2026-11-11** | `d7d4489` | `abchtaib` | Final README & documentation update | Full compliance with 42 subject documentation chapters. |
+| **2026-11-16** | `34da74f` | `yoelboud` | Refactor logger I/O & terminal overflow | Synchronized thread writes, added `vertical_overflow="crop"` and text truncation. |
+| **2026-11-19** | `51fc7d9` | `yoelboud` | Add PyInstaller spec (`PacMan.spec`) | Multi-platform packaging for Linux, macOS (.app), and Windows. |
+| **2026-11-19** | `ccda15f` | `yoelboud` | Makefile `build` automation | Added `make build` target for PyInstaller executable generation. |
+| **2026-11-19** | `034598d` | `abchtaib` | Executable asset path resolution | Ensured frozen binary locates `assets/` and runtime bundles cleanly. |
+| **2026-11-20** | `9e62770` | `yoelboud` | Pause and stop menu integration | Polished in-game pause workflow and state transitions. |
+| **2026-11-20** | `1434fba` | `abchtaib` | Documentation & UI synchronization | Synchronized documentation with latest game features. |
 
 ---
 

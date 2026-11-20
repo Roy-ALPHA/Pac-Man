@@ -48,16 +48,25 @@ Active cheats are listed in red in the bottom right corner of the screen.
 
 ### Requirements
 
-- Python 3.10 or newer (developed with Python 3.13)
-- [uv](recommended)
-- Python packages: `pygame-ce` and `lark`
+- Python 3.13 or newer
+- [uv](https://github.com/astral-sh/uv) (recommended package manager)
+- Dependencies: `pygame-ce`, `lark`, `platformdirs`, `rich`, `colorama`, and `mazegenerator` (included in `./wheels`)
 
-### Installation and execution
+### Installation and Execution
 
-From the root of the repository:
+Using `make` (recommended):
 
 ```bash
-uv sync            # install the dependencies
+make install       # install dependencies via uv
+make run           # start the game with default config
+make lint          # run flake8 and strict mypy verification
+make build         # package standalone executable via PyInstaller
+```
+
+Or directly with `uv`:
+
+```bash
+uv sync            # install dependencies
 uv run pac_man.py  # start the game
 ```
 
@@ -66,11 +75,24 @@ Without `uv`:
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install pygame-ce lark
+pip install wheels/mazegenerator-2.1.0-py3-none-any.whl
+pip install pygame-ce lark platformdirs rich colorama pyinstaller
 python pac_man.py
 ```
 
-Run the game **from the root of the repository**: the images are loaded with paths like `src/assets/...`.
+Run the game **from the root of the repository** so asset paths and configuration files resolve properly.
+
+### Packaging (Standalone Executable)
+
+The game can be compiled into a standalone executable using `PyInstaller` and the custom specification file [`PacMan.spec`](file:///home/itachi/Pac-Man/PacMan.spec):
+
+```bash
+make build
+# or: uv run python -m PyInstaller PacMan.spec
+```
+
+- **Linux / Windows:** Generates a self-contained one-file executable in `dist/PacMan` (or `PacMan.exe` on Windows) with embedded assets and platform icon (`assets/icons/win.ico`).
+- **macOS:** Generates an application bundle `dist/PacMan.app` with embedded icons (`assets/icons/ios.icns`).
 
 ### Playing
 
@@ -84,9 +106,10 @@ Run the game **from the root of the repository**: the images are loaded with pat
 
 | File | Purpose | Location |
 | --- | --- | --- |
-| `config.json` | Game rules | Project files |
-| `highscores.json` | Top 10 scores | Project files |
-| `pacman_states.json` | Saved game | Linux: `~/.local/share/pacman/` (or `$XDG_DATA_HOME/pacman/`), macOS: `~/Library/Application Support/pacman/`, Windows: `%LOCALAPPDATA%\pacman\` |
+| `config.json` | Game rules configuration | Project root |
+| `highscores.json` | Top 10 highscores table | `DATA_DIR`: Linux: `~/.local/share/pacman/` (or `$XDG_DATA_HOME/pacman/`), macOS: `~/Library/Application Support/pacman/`, Windows: `%LOCALAPPDATA%\pacman\` |
+| `pacman_states.json` | Saved game state | `DATA_DIR`: Linux: `~/.local/share/pacman/`, macOS: `~/Library/Application Support/pacman/`, Windows: `%LOCALAPPDATA%\pacman\` |
+| `logs.txt` | Persistent game logs | `LOGS_DIR`: Linux: `~/.cache/pacman/log/` (or platform log dir) |
 
 ## Configuration
 
@@ -206,29 +229,32 @@ All ghosts run away from Pac-Man when frightened. A ghost that has been eaten go
 ## General Software Architecture
 
 ```
-pac_man.py                  PacmanApp: window, main loop, screen switching
+PacMan.spec                 PyInstaller packaging configuration for Linux, macOS & Windows
+Makefile                    Automation targets (install, run, debug, clean, lint, build)
+pac_man.py                  PacmanApp: application entry point, game loop, screen lifecycle
 src/
-├── game_state_manager.py   GameStateManager: owns the screens, changes the active one
-├── main_menu_screen.py     MainMenuScreen
-├── playscreen.py           PlayScreen + PlayEngine (public view of the engine)
-├── engine.py               GameEngine, EngineState, Cheat
-├── entities.py             Entity, PacMan, Ghost, Direction, GhostState, Skill
-├── ghost_ai.py             GhostStrategy and the four ghost strategies
-├── consumables.py          PacGum, SuperPacGum and their effects
-├── maze_adapter.py         MazeAdapter, CellType (wrapper of A-Maze-ing)
-├── config.py               Config, LevelConfig
-├── highscore.py            HighscoreManager
-├── logs.py                 log(), LogType
+├── config.py               Config, LevelConfig: JSON rules loader with Lark comment stripping
+├── consumables.py          PacGum, SuperPacGum, polymorphic effect models
+├── data_dir.py             DATA_DIR, LOGS_DIR: XDG-compliant platform directory resolver
+├── engine.py               GameEngine, EngineState, Cheat: simulation loop & collision logic
+├── entities.py             Entity, PacMan, Ghost, Direction, GhostState, EntityEffect
+├── game_state_manager.py   GameStateManager: screen transition & routing controller
+├── ghost_ai.py             GhostStrategy, BFS shortest path, Blinky/Pinky/Inky/Clyde AI
+├── highscore.py            HighscoreManager: Top 10 leaderboard validation & JSON persistence
+├── logger.py               WarningManager, LogType: asynchronous Rich animated terminal logger
+├── main_menu_screen.py     MainMenuScreen: title, buttons, background rendering
+├── maze_adapter.py         MazeAdapter, CellType: abstraction over external A-Maze-ing wheel
+├── playscreen.py           PlayScreen + PlayEngine: screen coordinator & public engine facade
 └── ui/
-    ├── screen.py           Screen (abstract base class)
-    ├── inputhandler.py     InputHandler, InputCommand
-    ├── renderer.py         Renderer
-    ├── render_maze.py      RenderMaze
-    ├── render_consumables.py  RenderConsumables
-    ├── render_player.py    RenderPlayer
-    ├── render_ghost.py     RenderGhost
-    ├── highscore_screen.py HighscoreScreen
-    └── instructions_screen.py InstructionsScreen
+    ├── screen.py           Screen: abstract UI base class (handle_input, update, render)
+    ├── inputhandler.py     InputHandler, InputCommand: event queue to command mapping
+    ├── renderer.py         Renderer: master window management & sprite pipeline
+    ├── render_maze.py      RenderMaze: 8-neighbor bitmask procedural wall autotiling
+    ├── render_consumables.py  RenderConsumables: pac-gum & pulsing super pac-gum animations
+    ├── render_player.py    RenderPlayer: directional chomping animation & death sequences
+    ├── render_ghost.py     RenderGhost: chasing, frightened blue flashing & eaten eyes
+    ├── highscore_screen.py HighscoreScreen: interactive leaderboard display
+    └── instructions_screen.py InstructionsScreen: gameplay rules & cheat key guide
 ```
 
 **Relationships**
@@ -254,8 +280,9 @@ PacmanApp
 - **Every screen has the same three methods** (`handle_input`, `update`, `render`), so `GameStateManager` can treat them all the same way.
 - **One adapter for the maze package**, so the generation library is used in a single place.
 - **Rules live in one config object**, which is also saved with the game so a resumed game keeps the same rules.
+- **Cross-platform persistence**, saving scores, states, and logs in standard OS directories (`platformdirs`).
 
-For formal Mermaid UML class diagrams, state machines, and sequence diagrams, see [**UML Architecture & System Specifications**](./project_management/uml_architecture.md).
+For formal Mermaid UML class diagrams, state machines, and sequence diagrams, see [**UML Architecture & System Specifications**](./project_management/uml.md).
 
 ## Resources
 
@@ -271,19 +298,18 @@ For formal Mermaid UML class diagrams, state machines, and sequence diagrams, se
 
 **Use of AI**
 
-AI Was used to create readme file, also to understand better some concepts and parts of the project.
+AI was used to assist in drafting documentation, generating testing scaffolds, and refining algorithmic optimizations.
 
 ## Project Management
 
-- **Team and roles:** **yoelboud** was responsible for the core game logic (simulation engine, entity state machines, BFS ghost AI, configuration parsing with comments, and persistent state serialization); **abchtaib** was responsible for the user interface and rendering (Pygame-ce display pipeline, procedural maze autotiling bitmask, sprite animations, input command handling, HUD, and interactive screens).
+- **Team and Roles:**
+  - **yoelboud (Younss Boudali):** Core Game Logic & System Architecture. Responsible for the simulation physics engine (`src/engine.py`), entity state machines (`src/entities.py`), BFS ghost AI & pathfinding algorithms (`src/ghost_ai.py`), configuration parsing with Lark grammar comment stripping (`src/config.py`), consumable status effect system (`src/consumables.py`), A-Maze-ing maze adapter (`src/maze_adapter.py`), highscore validation & persistence (`src/highscore.py`), cross-platform data/log path resolution (`src/data_dir.py`), asynchronous animated terminal logger (`src/logger.py`), and standalone multi-platform packaging (`PacMan.spec`, PyInstaller, `Makefile` build pipeline).
+  - **abchtaib (Abdellah Chtaibi):** User Interface, Graphics & Presentation Architecture. Responsible for the Pygame-ce rendering pipeline (`src/ui/renderer.py`), 8-neighbor procedural autotiling bitmask engine (`src/ui/render_maze.py`), entity sprite animations & visual effects (`render_player.py`, `render_ghost.py`, `render_consumables.py`), screen lifecycle management (`screen.py`, `playscreen.py`, `main_menu_screen.py`, `highscore_screen.py`, `instructions_screen.py`), input command translation (`src/ui/inputhandler.py`), HUD overlays, pause & cheat UI, and visual asset slicing and styling.
 - **Organization:** The project applied an adapted Scrumban methodology over an 8-week delivery timeline (Sept 17 – Nov 11, 2026). Development was partitioned along strict Model-View-Controller (MVC) boundaries, communicating exclusively through typed public interfaces (`InputCommand`, `Screen`, `PlayEngine`).
-- **Tools:** Git & GitHub for version control and issue tracking, `uv` for reproducible environments and dependency locking, `flake8` and strict `mypy` for quality assurance.
+- **Tools:** Git & GitHub for version control and issue tracking, `uv` for reproducible environments and dependency locking, `flake8` and strict `mypy` for quality assurance, `PyInstaller` for frozen binary builds.
 - **Dedicated Project Management Directory:** [`project_management/`](./project_management/)
   - [**Team Organization & Governance**](./project_management/team_organization.md): Roles, RACI matrix, communication channels, and decision-making framework.
-  - [**Timeline, Gantt Chart & Kanban**](./project_management/timeline_and_gantt.md): Planned vs. actual milestones, Mermaid Gantt schedule, and Kanban board snapshots.
-  - [**Actual Progress Tracking**](./project_management/progress_tracking.md): Schedule variance analysis, milestone burn-up, and Git commit anchors.
-  - [**Project Analysis & Choices**](./project_management/project_analysis_and_choices.md): Technical trade-offs (MVC decoupling, BFS vs A*, 8-neighbor bitmask autotiling, Lark comment parsing, PlatformDirs).
-  - [**Risk Analysis & Mitigation**](./project_management/risk_management.md): Probability-impact matrix, contingency plans, and post-mortem evaluation of materialized risks.
-  - [**Acceptance Test Plan & Bug Fix Log**](./project_management/acceptance_test_plan.md): 28-point functional test suite against 42 specifications and verified defect resolution log.
-  - [**Blocking Points & Conflict Resolution**](./project_management/blocking_points_and_conflicts.md): Post-mortem of technical bottlenecks (off-center tile freeze, model leaks, git merges) and mediation protocols.
-  - [**UML Architecture & Design Specifications**](./project_management/uml_architecture.md): Formal Mermaid UML class diagram, component boundaries, engine/ghost state machines, and frame loop sequence diagram.
+  - [**Actual Progress Tracking**](./project_management/progress_tracking.md): Schedule variance analysis, milestone tracking, and Git commit anchors.
+  - [**Blocking Points & Conflict Resolution**](./project_management/blocking_points_and_conflicts.md): Post-mortem of technical bottlenecks (off-center tile freeze, model leaks, git merges, logger overflow, packaging) and mediation protocols.
+  - [**Acceptance Test Plan & Bug Fix Log**](./project_management/acceptance_test_plan.md): Functional test suite against 42 specifications and verified defect resolution log.
+  - [**UML Architecture & Design Specifications**](./project_management/uml.md): Formal Mermaid UML class diagrams, component boundaries, engine/ghost state machines, and frame loop sequence diagram.

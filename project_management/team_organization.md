@@ -28,6 +28,8 @@ To maximize velocity and eliminate merge bottlenecks, responsibilities were part
 │ • Input Handler (Command Queue) │   │ • Config Parser (Lark Grammar)   │
 │ • Heads-Up Display (HUD) & Cheat│   │ • Save/Resume State Serialization│
 │ • Highscores & Instructions UI  │   │ • Highscore Manager & File I/O   │
+│ • Visual Asset Integration      │   │ • Animated Terminal Logger (Rich)│
+│                                 │   │ • Packaging (PyInstaller / Spec) │
 └─────────────────────────────────┘   └──────────────────────────────────┘
 ```
 
@@ -46,7 +48,7 @@ To maximize velocity and eliminate merge bottlenecks, responsibilities were part
   - Visual asset slicing, scaling, hover states, and font typography.
 
 #### Younss Boudali (`yoelboud`) — Game Logic & Systems Architect
-- **Domain**: Simulation mathematics, physics, autonomous agent AI, data parsing, and persistence.
+- **Domain**: Simulation mathematics, physics, autonomous agent AI, data parsing, logging, and packaging.
 - **Specific Modules**:
   - `src/engine.py`: Fixed-timestep game loop, collision detection, level advancement, timers, cheat execution.
   - `src/entities.py`: `PacMan` and `Ghost` entity classes, grid positioning, tile centering, movement vectors.
@@ -55,7 +57,9 @@ To maximize velocity and eliminate merge bottlenecks, responsibilities were part
   - `src/consumables.py`: Polymorphic pellet objects and temporary status effect application.
   - `src/config.py`: Dynamic JSON configuration loader with Lark comment stripping (`#`, `//`, `/* */`) and level math.
   - `src/highscore.py`: Top 10 leaderboard validation and JSON persistence.
-  - `src/data_dir.py`: Cross-platform XDG-compliant storage management.
+  - `src/data_dir.py`: Cross-platform XDG-compliant storage management (`DATA_DIR`, `LOGS_DIR`).
+  - `src/logger.py`: Asynchronous animated terminal logger with Rich live spinners, overflow cropping, and fault-tolerant file I/O.
+  - Packaging & Build: `PacMan.spec`, multi-platform standalone PyInstaller build pipeline (Linux onefile, Windows `.exe`, macOS `.app`), and `Makefile` build targets.
 
 ---
 
@@ -85,6 +89,10 @@ The RACI model defines task accountability across the project lifecycle:
 | **Save/Resume Menu Integration & Button States** | A / R | I |
 | **Highscore Validation & File Persistence (`highscore.py`)** | I | A / R |
 | **Highscore Table Screen & Name Input UI** | A / R | I |
+| **XDG Directory Resolution (`data_dir.py`)** | I | A / R |
+| **Animated Terminal Logger (`logger.py`)** | I | A / R |
+| **Multi-Platform Packaging & PyInstaller (`PacMan.spec`)** | C | A / R |
+| **Makefile Automation (`build`, `run`, `lint`, `clean`)** | R | A / R |
 | **Static Typing (`mypy`) & Code Quality (`flake8`)** | R | A / R |
 | **Documentation & 42 Subject Compliance (Chapters IV-IX)** | A / R | A / R |
 

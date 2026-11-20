@@ -69,6 +69,14 @@ Quality Assurance was conducted through a combination of:
 | **TC-E07** | Save Game (`P`) | Pause game, click **Save Game**, quit. | Full state serializes to XDG JSON file; Resume button active on restart. | **PASS** |
 | **TC-E08** | Resume Game | Click **Resume** in Main Menu. | Game loads exact level, score, lives, eaten dots, and starts in paused state. | **PASS** |
 
+### Category F: Logging, Storage & Packaging
+
+| Test ID | Feature Under Test | Test Scenario / Input | Expected Result | Status |
+| :---: | :--- | :--- | :--- | :--- |
+| **TC-F01** | Terminal Logger Bounding | Generate rapid logs in 80x24 terminal. | Box widths capped to $\le 76$ chars, messages truncate at 48 chars, max 3 boxes, no vertical screen scrolling. | **PASS** |
+| **TC-F02** | Fault-Tolerant File I/O | Simulate read-only log directory or disk full. | Logger catches `OSError` cleanly; engine and game continue without crash. | **PASS** |
+| **TC-F03** | Standalone Executable | Execute `make build` and run binary from `dist/`. | Onefile executable launches independently with embedded assets and platform icons. | **PASS** |
+
 ---
 
 ## 3. Comprehensive Bug Tracker & Fix Log
@@ -86,3 +94,6 @@ The following table documents real defects discovered during development iterati
 | **BUG-07** | **Medium** | `src/entities.py` | **Respawn Effect Leak**: Ghosts killed while frightened retained speed debuffs after respawning at home tile. | Status effect collection was not cleared when repositioning entity to spawn. | `235336d` | `yoelboud` |
 | **BUG-08** | **Low** | `src/data_dir.py` | **Filesystem Permission Warning**: Hardcoded relative save paths failed when executing from external directories. | State path assumed current working directory had write access. Refactored to `platformdirs`. | `3b3d8f8` | `yoelboud` |
 | **BUG-09** | **Low** | `src/config.py` | **Windows Encoding Mismatch**: Non-ASCII characters in config path or system locale broke parser on Windows. | `open()` was invoked without explicit `encoding="utf-8"`. | `1c86914` | `abchtaib` |
+| **BUG-10** | **Medium** | `src/logger.py` | **Live Terminal Overflow**: Rapid game logging caused screen scrolling, desynchronizing Rich live cursor and stamping duplicate frames. | Unbounded table history and horizontal text wrap. Fixed with `BOX_WIDTH = 76`, `MAX_TABLES = 3`, and `vertical_overflow="crop"`. | `34da74f` | `yoelboud` |
+| **BUG-11** | **Medium** | `src/logger.py` | **Unprotected Concurrency in File I/O**: File write/flush executed outside thread lock, risking race conditions and crash on OS write error. | Missing synchronization and exception guards. Wrapped writes in `self._lock` and `try...except OSError`. | `34da74f` | `yoelboud` |
+| **BUG-12** | **Major** | `PacMan.spec` | **Asset Directory Missing in Frozen Binary**: Standalone executable failed on start with missing sprite assets. | Bundled datas path not copied into runtime temporary directory. Added `('assets', 'assets')` to Analysis datas. | `51fc7d9` | `yoelboud` & `abchtaib` |

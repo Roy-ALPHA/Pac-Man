@@ -19,6 +19,8 @@ During the 8-week engineering lifecycle of the Pac-Man project, several non-triv
 │ **BP-03**| 8-Neighbor Autotiling Del | Rendering     | Bitmask Atlas    │
 │ **BP-04**| Git Divergence on Effects | Version Ctrl  | 3-Way Desk Merge │
 │ **BP-05**| Mypy & Flake8 Violations  | Code Quality  | Sprint 4 Sweep   │
+│ **BP-06**| Logger Terminal Overflow  | Systems / I/O  | Bounds & Cropping│
+│ **BP-07**| Frozen Binary Asset Paths  | Packaging     | PyInstaller Spec │
 └─────────┴───────────────────────────┴───────────────┴──────────────────┘
 ```
 
@@ -88,6 +90,27 @@ During the 8-week engineering lifecycle of the Pac-Man project, several non-triv
   - Added explicit type annotations (`int`, `float`, `Tuple[int, int]`, `Optional[T]`) across all classes and functions.
   - Added complete PEP 257 docstrings for all modules, classes, and public methods.
   - Result: 0 `flake8` errors, 0 `mypy` warnings.
+
+---
+
+### Blocker BP-06: Asynchronous Logger Terminal Overflow & Thread Concurrency
+- **The Challenge**:
+  During rapid gameplay notifications (e.g. eating consecutive pellets or cheat toggles), the animated Rich terminal logger accumulated multiple spinner boxes. On standard 80x24 terminal windows, lines wrapped horizontally and pushed past the vertical height, triggering terminal scrolling. This scrolling broke Rich's ANSI cursor repositioning, causing severe screen jitter and leaving ghost frame trails. Furthermore, writing log files concurrently from multiple threads outside a lock risked I/O race conditions and unhandled `OSError` crashes.
+- **Impact**: Degraded terminal experience and risk of game crash upon logging failures.
+- **Resolution**:
+  - Implemented strict horizontal truncation (`MAX_MSG_LEN = 48`, box width 76 characters) and restricted active history to `MAX_TABLES = 3` (maximum 15 lines).
+  - Enabled `vertical_overflow="crop"` in Rich `Live` to guarantee the terminal never scrolls.
+  - Moved file I/O inside `self._lock` and wrapped disk writes and opens in `try...except OSError` exception guards.
+
+---
+
+### Blocker BP-07: PyInstaller Frozen Executable Asset Resolution
+- **The Challenge**:
+  When bundling the application into a standalone executable using PyInstaller, relative asset paths (e.g. `assets/...`) broke because PyInstaller unpacks bundled resources into a temporary directory (`sys._MEIPASS` in onefile mode).
+- **Impact**: Executable crashed immediately on launch due to missing PNG sprites and icons.
+- **Resolution**:
+  - Configured `PacMan.spec` to bundle the complete `assets/` directory and platform icons (`win.ico` and `ios.icns`).
+  - Standardized path resolution to verify directory contexts, supporting both development execution (`uv run pac_man.py`) and frozen standalone distribution (`dist/PacMan`).
 
 ---
 
