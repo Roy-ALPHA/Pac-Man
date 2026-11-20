@@ -467,14 +467,13 @@ class PlayScreen(Screen):
         """
         Method that check which button was clicked
         """
-        if not command.mouse_clicked:
-            return None
 
         mouse = pygame.mouse.get_pos()
         for text, rect in self._buttons().items():
-            if rect.collidepoint(mouse):
+            if command.mouse_clicked and rect.collidepoint(mouse):
                 return text
-
+            elif text == "Save" and command.enter_clicked:
+                return text
         return None
 
     def _is_on(self, text: str) -> bool:

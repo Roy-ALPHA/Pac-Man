@@ -41,9 +41,6 @@ def get_assets_dir() -> Path:
     else:
         base = Path(__file__).parent.parent
 
-    candidate = base / "assets"
-    if candidate.is_dir():
-        return candidate
     return base / "assets"
 
 

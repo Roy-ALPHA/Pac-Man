@@ -23,6 +23,7 @@ class InputCommand:
     toggle_cheats: bool = False
     cheat: int = 0
     backspace: bool = False
+    enter_clicked: bool = False
     lettre: str = ""
 
 
@@ -73,8 +74,11 @@ class InputHandler:
                 command.cheat = InputHandler.CHEAT_KEYS[event.key]
             elif event.key == pygame.K_BACKSPACE:
                 command.backspace = True
+            elif event.key == pygame.K_RETURN:
+                command.enter_clicked = True
 
-            command.lettre += event.unicode
+            if event.unicode.isprintable():
+                command.lettre = event.unicode
 
         return command
 
