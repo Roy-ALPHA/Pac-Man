@@ -138,9 +138,8 @@ class PlayScreen(Screen):
         self._panel.fill((10, 10, 50))
 
         self._save_rect = self._make_rect(300, 70, 130)
-        self._resume_rect = self._make_rect(500, 80, 0)
-        self._save_game_rect = self._make_rect(500, 80, 100)
-        self._menu_rect = self._make_rect(500, 80, 200)
+        self._save_game_rect = self._make_rect(500, 80, 0)
+        self._menu_rect = self._make_rect(500, 80, 100)
         self._yes_rect = self._make_rect(220, 80, 40, -150)
         self._no_rect = self._make_rect(220, 80, 40, 150)
 
@@ -458,8 +457,7 @@ class PlayScreen(Screen):
         if mode == "end":
             return {"Save": self._save_rect}
         if mode == "pause":
-            return {"Resume": self._resume_rect,
-                    "Save Game": self._save_game_rect,
+            return {"Save Game": self._save_game_rect,
                     "Main Menu": self._menu_rect}
 
         return self._hub_buttons()
