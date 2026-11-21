@@ -1,0 +1,63 @@
+======================================================================
+                        PAC-MAN - QUICKSTART GUIDE
+======================================================================
+
+1. CONTROLS
+----------------------------------------------------------------------
+Movement:             Arrow Keys or W / A / S / D
+Pause / Unpause:      P or Space
+Cycle Maze Theme:     C (switches visual color palettes)
+Menu Navigation:      Left Mouse Click
+
+Cheat Mode (press F1 first):
+  F1                  Toggle cheat mode ON / OFF
+  1                   Toggle invincibility (blinking Pac-Man)
+  2                   Add +1 Life
+  3                   Freeze / Unfreeze ghosts
+  4                   Speed boost
+  5                   Skip current level
+
+
+2. GAME OPTIONS & MENUS
+----------------------------------------------------------------------
+Main Menu:
+  - Play:             Start a new game (starts at Level 1).
+  - Resume:           Continue your previously saved game session.
+  - Instructions:     In-game guide and tips.
+  - Highscores:       View the Top 10 leaderboard.
+  - Quit:             Exit the game.
+
+Pause Menu (press P or Space during play):
+  - Resume Game:      Return to current game.
+  - Save Game:        Save session to disk so you can resume later.
+  - Main Menu:        Return to title screen (auto-saves game).
+
+Save & Highscore Locations:
+  - Linux:            ~/.local/share/pacman/
+  - macOS:            ~/Library/Application Support/pacman/
+  - Windows:          %LOCALAPPDATA%\pacman\
+
+
+3. CONFIGURATION (config.json)
+----------------------------------------------------------------------
+Place 'config.json' in the same folder as the executable to customize
+gameplay rules and balance. Comments (//, #, /* */) are supported.
+
+Default config.json:
+{
+  "width": 15,                     // Maze width in tiles (min: 7)
+  "height": 15,                    // Maze height in tiles (min: 7)
+  "lives": 3,                      // Starting lives (min: 1)
+  "points_per_pacgum": 10,         // Points for regular dots (>= 0)
+  "points_per_super_pacgum": 50,   // Points for energizer dots (>= 0)
+  "points_per_ghost": 200,         // Points for eating scared ghost (>= 0)
+  "frightened_duration": 8.0,      // Ghost scared time in seconds (>= 0)
+  "ghost_speed": 3.0,              // Base ghost speed in tiles/sec (> 0)
+  "pacman_speed": 5.0,             // Pac-Man speed in tiles/sec (> 0)
+  "seed": 42                       // Level 1 maze generation seed (>= 1)
+}
+
+Note: If config.json is omitted or any key is invalid, safe defaults
+are automatically applied. Level time is dynamically computed based
+on maze dimensions and pellet count.
+======================================================================
